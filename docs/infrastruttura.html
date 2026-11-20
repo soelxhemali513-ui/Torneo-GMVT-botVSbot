@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GMVT — Infrastruttura</title>
+  <link rel="icon" type="image/x-icon" href="images/favicon.ico" >
+  <link rel="stylesheet" href="gmvt-shared.css" />
+  <style>
+    :root {
+      --accent-color: #c8c5bc;
+      --accent-rgb:   200, 197, 188;
+      --green: #00ff88;
+      --green-dim: #00cc6a;
+      --green-faint: rgba(0,255,136,0.07);
+      --green-glow: rgba(0,255,136,0.22);
+      --bg: #050505;
+      --border: rgba(0,255,136,0.18);
+      --border-hover: rgba(0,255,136,0.50);
+      --text: #f0fff0;
+      --text-mid: #b8d4b8;
+      --text-dim: #8aac8a;
+      --mono: 'Share Tech Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+    .nav-link { font-family: var(--mono); color: var(--text-mid) !important; font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.4rem 0.9rem !important; transition: color 0.2s; }
+    .nav-link:hover { color: var(--green) !important; }
+   
+    .tt-grid {
+      display: grid; grid-template-columns: repeat(8, 1fr);
+      gap: 3px; margin: 1.2rem 0;
+    }
+    .tt-cell {
+      aspect-ratio: 1.6; display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 0.58rem; border: 1px solid;
+      transition: all 0.35s;
+    }
+    .tt-cell.empty   { border-color: rgba(200,197,188,0.1); color: rgba(200,197,188,0.2); background: rgba(0,0,0,0.2); }
+    .tt-cell.filled  { border-color: rgba(200,197,188,0.35); color: var(--accent-color); background: rgba(200,197,188,0.08); }
+    .tt-cell.hit     { border-color: rgba(0,255,136,0.6); color: var(--green); background: rgba(0,255,136,0.1); }
+    .tt-cell.new     { border-color: rgba(175,169,240,0.6); color: #afa9f0; background: rgba(175,169,240,0.1); }
+    .tt-cell.replace { border-color: rgba(240,150,122,0.5); color: #f0967a; background: rgba(240,150,122,0.08); }
+
+    .hash-row {
+      display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; flex-wrap: wrap;
+    }
+    .hash-piece {
+      font-family: var(--mono); font-size: 0.72rem; color: var(--accent-color);
+      border: 1px solid rgba(200,197,188,0.28); padding: 0.2rem 0.55rem;
+      background: rgba(200,197,188,0.05);
+    }
+    .hash-xor  { font-family: var(--mono); font-size: 0.8rem; color: var(--text-dim); }
+    .hash-val  { font-family: var(--mono); font-size: 0.72rem; color: var(--green); padding: 0.2rem 0.55rem; border: 1px solid rgba(0,255,136,0.3); background: rgba(0,255,136,0.05); }
+    .hash-result { font-family: var(--mono); font-size: 0.85rem; color: var(--green); font-weight: 700; }
+
+    .book-line {
+      border: 1px solid var(--border); background: var(--bg-code);
+      padding: 0.8rem 1.1rem; margin-bottom: 0.4rem; display: flex;
+      align-items: center; gap: 1rem; transition: border-color 0.2s;
+    }
+    .book-line:hover { border-color: rgba(200,197,188,0.35); }
+    .book-opening-name { font-family: var(--sans); font-weight: 600; font-size: 0.88rem; color: var(--text); min-width: 180px; }
+    .book-moves { font-family: var(--mono); font-size: 0.72rem; color: var(--text-dim); flex: 1; letter-spacing: 0.04em; }
+    .book-freq  { font-family: var(--mono); font-size: 0.65rem; color: var(--accent-color); }
+
+    /* ── Repetition / 50-move counter ── */
+    .rep-track { height: 28px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); position: relative; overflow: hidden; margin: 0.5rem 0; }
+    .rep-fill  { height: 100%; transition: width 0.5s ease; display: flex; align-items: center; padding: 0 0.5rem; }
+    .rep-label { font-family: var(--mono); font-size: 0.65rem; }
+    .rep-controls { display: flex; gap: 0.5rem; margin-top: 0.8rem; flex-wrap: wrap; }
+    .rep-btn { font-family: var(--mono); font-size: 0.7rem; color: var(--accent-color); border: 1px solid rgba(200,197,188,0.28); background: rgba(200,197,188,0.06); padding: 0.3rem 0.75rem; cursor: pointer; text-transform: uppercase; transition: background 0.2s; }
+    .rep-btn:hover { background: rgba(200,197,188,0.13); }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">GMVT</a>
+  <div style="display:flex; align-items:center; gap:2rem;">
+    <a class="nav-back" href="index.html"> Algoritmi</a>
+    <ul class="navbar-nav">
+      <li><a class="nav-link" href="valutazione.html">← Valutazione</a></li>
+    </ul>
+  </div>
+</nav>
+
+<section class="page-hero">
+  <div class="page-hero-grid"></div>
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem; position:relative; z-index:2;">
+    <div class="page-tag">🏗️ Categoria 5 / 5</div>
+    <h1 class="page-title">Infrastruttura<span>.</span></h1>
+    <p class="page-intro">
+      Sotto ogni algoritmo di ricerca c'è uno strato di meccanismi invisibili ma fondamentali: 
+      la tabella di trasposizioni che ricorda posizioni già viste, lo Zobrist hashing che 
+      identifica ogni scacchiera in modo univoco, l'opening book che guida le prime mosse, 
+      e le euristiche che rendono tutto più veloce.
+    </p>
+    <div class="page-pills">
+      <span class="pill"><a class="nav-link" href="#ZobristHashing">Zobrist Hashing</a></span> <!--<a class="nav-link" href="#hero">Opening Book</a>-->
+      <span class="pill"><a class="nav-link" href="#TT">Tabella Trasposizioni</a></span>
+      <span class="pill"><a class="nav-link" href="#IID">IID</a></span>
+      <span class="pill"><a class="nav-link" href="#50Move">Regola 50 mosse</a></span>
+      <span class="pill"><a class="nav-link" href="#IID">Countermove Heuristic</a></span>
+      <span class="pill"><a class="nav-link" href="#Opening">Opening Book</a></span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="ZobristHashing">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">componente 01</div>
+    <h2 class="section-heading">Zobrist Hashing</h2>
+
+    <div class="section-body mb-3">
+      Come fa il motore a riconoscere se una posizione è già stata analizzata?
+      Lo <strong>Zobrist Hashing</strong> assegna un numero a 64 bit a ogni configurazione 
+      della scacchiera combinando con XOR i valori random precalcolati per ogni 
+      <em>(pezzo × casella)</em>.
+      <br><br>
+      Il risultato è un hash quasi unico: due posizioni diverse producono (quasi sempre) 
+      hash diversi, mentre la stessa posizione raggiunta per percorsi diversi produce 
+      <em>sempre</em> lo stesso hash. L'aggiornamento incrementale — rimuovendo XOR del 
+      pezzo partenza e aggiungendo quello destinazione — rende il calcolo velocissimo.
+    </div>
+
+    <!-- Hash construction visual -->
+    <div class="fade-up" style="background:var(--bg-code);border:1px solid var(--border);padding:1.4rem 1.6rem;margin:1.5rem 0;">
+      <div style="font-family:var(--mono);font-size:0.68rem;letter-spacing:0.18em;color:var(--accent-color);margin-bottom:1rem;">// COSTRUZIONE HASH — ESEMPIO</div>
+
+      <div class="hash-row">
+        <div class="hash-piece">♔ Re bianco e1</div>
+        <div class="hash-xor">→</div>
+        <div class="hash-val">0xA4B3C2D1E0F19283</div>
+      </div>
+      <div class="hash-row">
+        <div class="hash-piece">♙ Pedone bianco e2</div>
+        <div class="hash-xor">XOR</div>
+        <div class="hash-val">0x3F7E1A2B4C5D6E7F</div>
+      </div>
+      <div class="hash-row">
+        <div class="hash-piece">♟ Pedone nero e7</div>
+        <div class="hash-xor">XOR</div>
+        <div class="hash-val">0x1B2C3D4E5F607182</div>
+      </div>
+      <div class="hash-row">
+        <div class="hash-piece">… tutti i pezzi …</div>
+        <div class="hash-xor">XOR</div>
+        <div class="hash-val">0x…</div>
+      </div>
+      <div style="height:1px;background:var(--border);margin:0.8rem 0;"></div>
+      <div class="hash-row">
+        <div style="font-family:var(--mono);font-size:0.72rem;color:var(--text-dim);">HASH FINALE</div>
+        <div class="hash-xor">=</div>
+        <div class="hash-result">0x7C3F1A9B2D4E6F80</div>
+      </div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">zobrist.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="cm">// Tabella random 64-bit: [tipo_pezzo][casella][colore]</span>
+<span class="kw">uint64_t</span> <span class="var">ZOBRIST</span>[<span class="num">6</span>][<span class="num">64</span>][<span class="num">2</span>];
+
+<span class="kw">void</span> <span class="fn">init_zobrist</span>() {
+    <span class="kw">for</span> (<span class="kw">auto</span>&amp; <span class="var">p</span> : <span class="var">ZOBRIST</span>) <span class="kw">for</span> (<span class="kw">auto</span>&amp; <span class="var">s</span> : <span class="var">p</span>) <span class="kw">for</span> (<span class="kw">auto</span>&amp; <span class="var">v</span> : <span class="var">s</span>)
+        <span class="var">v</span> = <span class="fn">rand64</span>();  <span class="cm">// numeri pseudo-casuali a 64 bit</span>
+}
+
+<span class="cm">// Aggiornamento incrementale dopo una mossa</span>
+<span class="kw">void</span> <span class="fn">aggiorna_hash</span>(<span class="kw">uint64_t</span>&amp; <span class="var">hash</span>, <span class="tp">Mossa</span> <span class="var">m</span>) {
+<span class="hl">    hash ^= <span class="var">ZOBRIST</span>[<span class="var">m</span>.<span class="var">pezzo</span>][<span class="var">m</span>.<span class="var">da</span>][<span class="var">m</span>.<span class="var">colore</span>];   <span class="cm">// rimuovi partenza</span></span>
+<span class="hl">    hash ^= <span class="var">ZOBRIST</span>[<span class="var">m</span>.<span class="var">pezzo</span>][<span class="var">m</span>.<span class="var">a</span>][<span class="var">m</span>.<span class="var">colore</span>];    <span class="cm">// aggiungi destinazione</span></span>
+    <span class="kw">if</span> (<span class="var">m</span>.<span class="var">cattura</span>) hash ^= <span class="var">ZOBRIST</span>[<span class="var">m</span>.<span class="var">cattura</span>][<span class="var">m</span>.<span class="var">a</span>][<span class="op">!</span><span class="var">m</span>.<span class="var">colore</span>];
+}
+
+<span class="cm">// L'aggiornamento XOR è O(1) — indipendente dal numero di pezzi</span>
+<span class="cm">// Ricalcolo completo sarebbe O(32) — usato solo all'inizializzazione</span></pre>
+      </div>
+    </div>
+
+    <div class="callout fade-up">
+      <div class="callout-icon">🎲</div>
+      <div class="callout-content">
+        <div class="callout-title">Perché XOR funziona perfettamente</div>
+        <div class="callout-text">
+          Lo XOR ha due proprietà fondamentali: <strong>A XOR A = 0</strong> (rimuovere 
+          un pezzo è l'operazione inversa di aggiungerlo) e <strong>A XOR B = B XOR A</strong> 
+          (l'ordine non conta). Questo garantisce che lo stesso insieme di pezzi 
+          produca sempre lo stesso hash, indipendentemente dall'ordine in cui sono stati piazzati.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</s3ection>
+
+<div class="divider"></div>
+
+<section class="content-section" id="TT">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">componente 02</div>
+    <h2 class="section-heading">Tabella Trasposizioni (TT)</h2>
+
+    <div class="section-body mb-3">
+      La <strong>Tabella Trasposizioni</strong> è una cache hash di dimensione fissa 
+      (tipicamente 128–256 MB) che memorizza i risultati delle ricerche già effettuate. 
+      Quando il motore incontra una posizione già analizzata — raggiunta per un percorso 
+      diverso, da qui il nome "trasposizione" — può riusare il risultato invece di 
+      ricalcolarlo.
+      <br><br>
+      Ogni entry conserva: <strong>hash Zobrist</strong>, 
+      <strong>profondità</strong>, <strong>valore</strong>, 
+      <strong>tipo</strong> (esatto / lower bound / upper bound) e 
+      <strong>mossa migliore</strong> (usata per l'ordinamento).
+    </div>
+
+    <div class="complexity-row fade-up">
+      <div class="complexity-badge"><div class="cb-label">Dimensione</div><div class="cb-value">128 MB</div></div>
+      <div class="complexity-badge"><div class="cb-label">Entry size</div><div class="cb-value">16 byte</div></div>
+      <div class="complexity-badge"><div class="cb-label">Hit rate</div><div class="cb-value">~70-90%</div></div>
+      <div class="complexity-badge"><div class="cb-label">Tipi entry</div><div class="cb-value">EXACT / LB / UB</div></div>
+    </div>
+
+    <!-- TT visual grid -->
+    <div class="fade-up" style="margin:1.5rem 0;">
+      <div style="font-family:var(--mono);font-size:0.68rem;letter-spacing:0.16em;color:var(--accent-color);margin-bottom:0.6rem;">// TABELLA TRASPOSIZIONI — STATO CORRENTE</div>
+      <div class="tt-grid" id="tt-grid"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:1rem;margin-top:0.8rem;">
+        <div style="display:flex;align-items:center;gap:0.4rem;font-family:var(--mono);font-size:0.65rem;color:var(--text-dim);">
+          <div style="width:12px;height:12px;border:1px solid rgba(200,197,188,0.35);background:rgba(200,197,188,0.08);"></div> Occupata
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;font-family:var(--mono);font-size:0.65rem;color:var(--text-dim);">
+          <div style="width:12px;height:12px;border:1px solid rgba(0,255,136,0.6);background:rgba(0,255,136,0.1);"></div> Hit (riuso)
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;font-family:var(--mono);font-size:0.65rem;color:var(--text-dim);">
+          <div style="width:12px;height:12px;border:1px solid rgba(175,169,240,0.6);background:rgba(175,169,240,0.1);"></div> Nuova entry
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;font-family:var(--mono);font-size:0.65rem;color:var(--text-dim);">
+          <div style="width:12px;height:12px;border:1px solid rgba(240,150,122,0.5);background:rgba(240,150,122,0.08);"></div> Sostituzione
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;font-family:var(--mono);font-size:0.65rem;color:var(--text-dim);">
+          <div style="width:12px;height:12px;border:1px solid rgba(200,197,188,0.1);background:rgba(0,0,0,0.2);"></div> Vuota
+        </div>
+      </div>
+      <div class="rep-controls" style="margin-top:1rem;">
+        <button class="rep-btn" onclick="ttSimulate()">▶ Simula ricerca</button>
+        <button class="rep-btn" onclick="ttReset()">↺ Reset</button>
+      </div>
+      <div class="status-box" style="margin-top:0.8rem;">
+        <div class="status-icon" id="tt-icon">💾</div>
+        <div class="status-text" id="tt-status">Tabella inizializzata. Premi "Simula ricerca" per vedere hit e miss.</div>
+      </div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">transposition_table.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="kw">struct</span> <span class="tp">TTEntry</span> {
+    <span class="kw">uint64_t</span> <span class="var">hash</span>;    <span class="cm">// chiave Zobrist per verifica collisioni</span>
+    <span class="kw">int16_t</span>  <span class="var">valore</span>;  <span class="cm">// risultato della ricerca</span>
+    <span class="kw">uint8_t</span>  <span class="var">depth</span>;   <span class="cm">// profondità a cui è stato calcolato</span>
+    <span class="kw">uint8_t</span>  <span class="var">tipo</span>;    <span class="cm">// EXACT=0, LOWER=1, UPPER=2</span>
+    <span class="tp">Mossa</span>    <span class="var">best</span>;    <span class="cm">// mossa migliore trovata (per l'ordinamento)</span>
+};
+
+<span class="cm">// Lookup nella TT — O(1)</span>
+<span class="tp">TTEntry</span>* <span class="fn">tt_lookup</span>(<span class="kw">uint64_t</span> <span class="var">hash</span>) {
+    <span class="kw">return</span> &amp;<span class="var">TT</span>[<span class="var">hash</span> % <span class="var">TT_SIZE</span>];
+}
+
+<span class="cm">// Utilizzo nella ricerca</span>
+<span class="tp">TTEntry</span>* <span class="var">entry</span> = <span class="fn">tt_lookup</span>(<span class="var">s</span>.<span class="var">hash</span>);
+<span class="kw">if</span> (<span class="var">entry</span>-&gt;<span class="var">hash</span> == <span class="var">s</span>.<span class="var">hash</span> && <span class="var">entry</span>-&gt;<span class="var">depth</span> &gt;= <span class="var">prof</span>)
+{
+<span class="hl">    <span class="kw">if</span> (<span class="var">entry</span>-&gt;<span class="var">tipo</span> == <span class="var">EXACT</span>)  <span class="kw">return</span> <span class="var">entry</span>-&gt;<span class="var">valore</span>;   <span class="cm">// hit esatto</span></span>
+    <span class="kw">if</span> (<span class="var">entry</span>-&gt;<span class="var">tipo</span> == <span class="var">LOWER</span> && <span class="var">entry</span>-&gt;<span class="var">valore</span> &gt;= <span class="var">beta</span>)  <span class="kw">return</span> <span class="var">beta</span>;
+    <span class="kw">if</span> (<span class="var">entry</span>-&gt;<span class="var">tipo</span> == <span class="var">UPPER</span> && <span class="var">entry</span>-&gt;<span class="var">valore</span> &lt;= <span class="var">alfa</span>)  <span class="kw">return</span> <span class="var">alfa</span>;
+}</pre>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="IID">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">componenti 03–04</div>
+    <h2 class="section-heading">IID &amp; Countermove Heuristic</h2>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-bottom:2rem;" class="fade-up">
+      <div class="concept-card">
+        <div class="concept-num">03</div>
+        <div class="concept-label">Internal Iterative Deepening</div>
+        <div class="concept-title">Mossa TT mancante? IID la trova</div>
+        <div class="concept-text">
+          Quando un nodo non ha una mossa TT disponibile (miss in tabella), 
+          l'ordinamento delle mosse peggiora drasticamente. 
+          <strong>IID</strong> esegue una ricerca superficiale 
+          (<code style="font-family:var(--mono);color:var(--accent-color)">prof - 2</code>) 
+          per trovare una mossa "buona" da usare come prima candidata.
+          <br><br>
+          Il costo di IID è ammortizzato: la mossa trovata migliora abbastanza 
+          l'ordinamento da far guadagnare più tempo di quante ne costa.
+        </div>
+      </div>
+      <div class="concept-card">
+        <div class="concept-num">04</div>
+        <div class="concept-label">Countermove Heuristic</div>
+        <div class="concept-title">La risposta alla mossa precedente</div>
+        <div class="concept-text">
+          La <strong>Countermove Heuristic</strong> memorizza, per ogni mossa 
+          dell'avversario, quale mossa del giocatore corrente ha causato un cutoff 
+          nell'ultima volta che quella mossa avversaria è stata vista.
+          <br><br>
+          Nella struttura <code style="font-family:var(--mono);color:var(--accent-color)">contromossa[pezzo][casella]</code>, 
+          GMVT conserva la risposta vincente e la propone prima nell'ordinamento — 
+          spesso causando cutoff early.
+        </div>
+      </div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">iid_countermove.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="cm">// IID: se non c'è mossa TT, fai una ricerca superficiale</span>
+<span class="tp">Mossa</span> <span class="var">mossa_tt</span> = <span class="fn">tt_best</span>(<span class="var">s</span>.<span class="var">hash</span>);
+<span class="kw">if</span> (!<span class="var">mossa_tt</span>.<span class="fn">valida</span>() && <span class="var">prof</span> &gt;= <span class="num">6</span>)
+{
+<span class="hl">    <span class="fn">minimax</span>(<span class="var">s</span>, <span class="var">prof</span> <span class="op">-</span> <span class="num">2</span>, <span class="var">alfa</span>, <span class="var">beta</span>);  <span class="cm">// IID: cerca a prof-2</span></span>
+    <span class="var">mossa_tt</span> = <span class="fn">tt_best</span>(<span class="var">s</span>.<span class="var">hash</span>);       <span class="cm">// ora la TT ha una mossa</span>
+}
+
+<span class="cm">// Countermove Heuristic: aggiorna dopo un cutoff</span>
+<span class="kw">if</span> (<span class="var">val</span> &gt;= <span class="var">beta</span> && !<span class="fn">e_cattura</span>(<span class="var">mossa</span>))
+{
+<span class="hl">    <span class="var">contromossa</span>[<span class="var">mossa_prev</span>.<span class="var">pezzo</span>][<span class="var">mossa_prev</span>.<span class="var">dest</span>] = <span class="var">mossa</span>; <span class="cm">// memorizza</span></span>
+}
+
+<span class="cm">// Ordinamento: la contromossa viene proposta subito dopo killer e TT</span>
+<span class="kw">if</span> (<span class="var">mossa</span> == <span class="var">contromossa</span>[<span class="var">prev</span>.<span class="var">pezzo</span>][<span class="var">prev</span>.<span class="var">dest</span>])
+    <span class="var">score_ord</span> += <span class="num">9000</span>;  <span class="cm">// alta priorità nell'ordinamento</span></pre>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="50Move">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">componente 05</div>
+    <h2 class="section-heading">Regola 50 Mosse &amp; Ripetizioni</h2>
+
+    <div class="section-body mb-3">
+      Il motore deve riconoscere le situazioni di patta per non valutare erroneamente 
+      posizioni che terminano in pareggio. GMVT gestisce due casi distinti:
+      <br><br>
+      <strong>Regola delle 50 mosse</strong>: se per 50 mosse consecutive non è stata 
+      fatta una cattura né una mossa di pedone, la partita è patta. 
+      Il contatore <code style="font-family:var(--mono);color:var(--accent-color)">half_move_clock</code> 
+      viene azzerato a ogni cattura/mossa pedone.
+      <br><br>
+      <strong>Triplice ripetizione</strong>: se la stessa posizione compare tre volte 
+      nella partita (con le stesse possibilità di arrocco ed en passant), è patta. 
+      GMVT usa lo stack degli hash Zobrist per rilevare le ripetizioni in O(d).
+    </div>
+
+    <!-- 50-move counter visual -->
+    <div class="fade-up" style="margin:1.5rem 0;">
+      <div style="font-family:var(--mono);font-size:0.68rem;letter-spacing:0.16em;color:var(--accent-color);margin-bottom:0.6rem;">// CONTATORE HALF-MOVE CLOCK</div>
+      <div class="rep-track">
+        <div class="rep-fill" id="rep-fill" style="width:0%;background:rgba(200,197,188,0.3);">
+          <span class="rep-label" id="rep-label" style="color:var(--accent-color);">0 / 100</span>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:0.62rem;color:var(--text-dim);margin-top:0.2rem;">
+        <span>0 (mossa pedone/cattura)</span>
+        <span style="color:#f0967a;">100 = PATTA ⚑</span>
+      </div>
+      <div class="rep-controls">
+        <button class="rep-btn" onclick="repAdd(10)">+10 mosse silenzose</button>
+        <button class="rep-btn" onclick="repAdd(20)">+20 mosse silenzose</button>
+        <button class="rep-btn" onclick="repReset()">↺ Cattura/Pedone (reset)</button>
+      </div>
+      <div class="status-box" style="margin-top:0.8rem;">
+        <div class="status-icon" id="rep-icon">🕐</div>
+        <div class="status-text" id="rep-status">Contatore a zero. Gioca alcune mosse silenzose.</div>
+      </div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">draw_detection.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="cm">// Controllo patta all'inizio di ogni nodo</span>
+<span class="kw">int</span> <span class="fn">minimax</span>(<span class="tp">Scacchiera</span>&amp; <span class="var">s</span>, <span class="kw">int</span> <span class="var">prof</span>, <span class="kw">int</span> <span class="var">alfa</span>, <span class="kw">int</span> <span class="var">beta</span>)
+{
+<span class="hl">    <span class="cm">// Regola 50 mosse</span></span>
+<span class="hl">    <span class="kw">if</span> (<span class="var">s</span>.<span class="var">half_move_clock</span> &gt;= <span class="num">100</span>) <span class="kw">return</span> <span class="num">0</span>;  <span class="cm">// patta!</span></span>
+
+    <span class="cm">// Rilevamento ripetizioni: scansiona lo stack degli hash</span>
+    <span class="kw">for</span> (<span class="kw">int</span> <span class="var">i</span> = <span class="var">ply</span> <span class="op">-</span> <span class="num">2</span>; <span class="var">i</span> &gt;= <span class="num">0</span>; <span class="var">i</span> <span class="op">-=</span> <span class="num">2</span>) {
+<span class="hl">        <span class="kw">if</span> (<span class="var">hash_stack</span>[<span class="var">i</span>] == <span class="var">s</span>.<span class="var">hash</span>) <span class="kw">return</span> <span class="num">0</span>;  <span class="cm">// ripetizione!</span></span>
+        <span class="kw">if</span> (<span class="var">hash_stack</span>[<span class="var">i</span>] == <span class="var">reset_hash</span>) <span class="kw">break</span>; <span class="cm">// pedone/cattura → stop</span>
+    }
+
+    <span class="cm">// ... continua la ricerca normale</span>
+}</pre>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="Opening">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">componente 06</div>
+    <h2 class="section-heading">Opening Book</h2>
+
+    <div class="section-body mb-3">
+      Nelle primissime mosse di apertura, la ricerca non è il modo migliore per 
+      scegliere: le posizioni sono troppo equilibrate e la profondità necessaria 
+      per distinguere le varianti sarebbe enorme. 
+      L'<strong>Opening Book</strong> di GMVT contiene ~60 linee di apertura 
+      codificate come sequenze di hash Zobrist → mossa.
+      <br><br>
+      Il motore consulta il libro nelle prime mosse e risponde immediatamente, 
+      senza sprecare tempo di calcolo in posizioni teoricamente consolidate.
+    </div>
+
+    <!-- Alcune aperture del book -->
+    <div class="fade-up" style="margin:1.5rem 0;">
+      <div style="font-family:var(--mono);font-size:0.68rem;letter-spacing:0.16em;color:var(--accent-color);margin-bottom:0.8rem;">// CAMPIONARIO OPENING BOOK — LINEE INCLUSE</div>
+
+      <div class="book-line">
+        <div class="book-opening-name">Partita Italiana</div>
+        <div class="book-moves">1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 4.c3 Nf6 5.d4</div>
+        <div class="book-freq">⭐⭐⭐</div>
+      </div>
+      <div class="book-line">
+        <div class="book-opening-name">Difesa Siciliana — Najdorf</div>
+        <div class="book-moves">1.e4 c5 2.Nf3 d6 3.d4 cxd4 4.Nxd4 Nf6 5.Nc3 a6</div>
+        <div class="book-freq">⭐⭐⭐</div>
+      </div>
+      <div class="book-line">
+        <div class="book-opening-name">Ruy Lopez</div>
+        <div class="book-moves">1.e4 e5 2.Nf3 Nc6 3.Bb5 a6 4.Ba4 Nf6 5.O-O</div>
+        <div class="book-freq">⭐⭐⭐</div>
+      </div>
+      <div class="book-line">
+        <div class="book-opening-name">Difesa Francese</div>
+        <div class="book-moves">1.e4 e6 2.d4 d5 3.Nc3 Nf6 4.Bg5 Be7 5.e5</div>
+        <div class="book-freq">⭐⭐</div>
+      </div>
+      <div class="book-line">
+        <div class="book-opening-name">Apertura Inglese</div>
+        <div class="book-moves">1.c4 e5 2.Nc3 Nf6 3.Nf3 Nc6 4.g3 d5 5.cxd5</div>
+        <div class="book-freq">⭐⭐</div>
+      </div>
+      <div class="book-line">
+        <div class="book-opening-name">Gambetto di Donna</div>
+        <div class="book-moves">1.d4 d5 2.c4 e6 3.Nc3 Nf6 4.Bg5 Be7 5.e3</div>
+        <div class="book-freq">⭐⭐⭐</div>
+      </div>
+      <div class="book-line">
+        <div class="book-opening-name">Difesa King's Indian</div>
+        <div class="book-moves">1.d4 Nf6 2.c4 g6 3.Nc3 Bg7 4.e4 d6 5.Nf3</div>
+        <div class="book-freq">⭐⭐</div>
+      </div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">opening_book.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="cm">// Book: mappa hash Zobrist → mossa (precompilata)</span>
+<span class="kw">static const</span> std::unordered_map&lt;<span class="kw">uint64_t</span>, <span class="tp">Mossa</span>&gt; <span class="var">OPENING_BOOK</span> = {
+    { <span class="num">0xA4B3C2D1E0F19283</span>, <span class="fn">mossa</span>(<span class="str">"e2e4"</span>) },  <span class="cm">// pos. iniziale → e4</span>
+    { <span class="num">0x3F7E1A2B4C5D6E7F</span>, <span class="fn">mossa</span>(<span class="str">"d2d4"</span>) },  <span class="cm">// pos. iniziale → d4 (alt.)</span>
+    { <span class="num">0x1B2C3D4E5F607182</span>, <span class="fn">mossa</span>(<span class="str">"g1f3"</span>) },  <span class="cm">// dopo 1.e4 e5 → Nf3</span>
+    <span class="cm">// ... ~60 linee totali</span>
+};
+
+<span class="tp">Mossa</span> <span class="fn">cerca_book</span>(<span class="kw">uint64_t</span> <span class="var">hash</span>) {
+    <span class="kw">auto</span> <span class="var">it</span> = <span class="var">OPENING_BOOK</span>.<span class="fn">find</span>(<span class="var">hash</span>);
+<span class="hl">    <span class="kw">return</span> (<span class="var">it</span> != <span class="var">OPENING_BOOK</span>.<span class="fn">end</span>()) ? <span class="var">it</span>-&gt;<span class="var">second</span> : <span class="tp">Mossa</span>();</span>
+    <span class="cm">// Se non trovato → mossa nulla → ricerca normale</span>
+}</pre>
+      </div>
+    </div>
+
+    <div class="callout fade-up">
+      <div class="callout-icon">📖</div>
+      <div class="callout-content">
+        <div class="callout-title">Book lookup in O(1)</div>
+        <div class="callout-text">
+          Il lookup nell'opening book è basato sull'hash Zobrist della posizione corrente: 
+          <strong>O(1)</strong> con l'unordered_map. GMVT usa il book finché la posizione 
+          è nel database; appena esce dalle linee conosciute, attiva la ricerca normale.
+          L'hash Zobrist già calcolato viene riusato, senza costo aggiuntivo.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── Page Nav ── -->
+<div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+  <nav class="page-nav">
+    <a href="valutazione.html" class="page-nav-btn prev">
+      <span class="pnb-arrow">←</span>
+      <div><div class="pnb-label">Precedente</div><div class="pnb-title">Valutazione</div></div>
+    </a>
+    <a href="index.html" class="page-nav-btn">
+      <div><div class="pnb-label">Torna a</div><div class="pnb-title">Tutti gli algoritmi</div></div>
+      <span class="pnb-arrow">→</span>
+    </a>
+  </nav>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-brand">GMVT</div>
+  <div class="site-footer-copy">// chess engine · C++ · 2025–2026</div>
+</footer>
+
+<script>
+const TT_SIZE = 32; // celle visualizzate
+let ttState = [];
+
+function ttReset() {
+  ttState = Array(TT_SIZE).fill('empty');
+  // Pre-popola qualcuna come "filled"
+  [2,5,7,11,14,18,22,25,28].forEach(i => { ttState[i] = 'filled'; });
+  ttRender();
+  document.getElementById('tt-icon').textContent = '💾';
+  document.getElementById('tt-status').textContent = 'Tabella inizializzata. Premi "Simula ricerca" per vedere hit e miss.';
+}
+
+function ttRender() {
+  const grid = document.getElementById('tt-grid');
+  grid.innerHTML = '';
+  ttState.forEach((state, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'tt-cell ' + state;
+    const labels = { empty: '—', filled: 'd' + (4 + (i % 5)), hit: 'HIT', new: 'NEW', replace: 'REP' };
+    cell.textContent = labels[state] || '—';
+    grid.appendChild(cell);
+  });
+}
+
+function ttSimulate() {
+  // Simula una ricerca: hit su alcune, nuove su altre, replace su alcune
+  const hits    = [5, 11, 22];
+  const newOnes = [3, 9, 19, 30];
+  const replace = [14, 25];
+
+  hits.forEach(i    => { ttState[i] = 'hit'; });
+  newOnes.forEach(i => { ttState[i] = 'new'; });
+  replace.forEach(i => { ttState[i] = 'replace'; });
+  ttRender();
+
+  const hitCount = hits.length;
+  const newCount = newOnes.length;
+  document.getElementById('tt-icon').textContent = '✅';
+  document.getElementById('tt-status').textContent =
+    `Ricerca completata: ${hitCount} HIT (riuso), ${newCount} nuove entry, ${replace.length} sostituzioni. Hit rate: ~75%.`;
+}
+
+let repCount = 0;
+
+function repUpdate() {
+  const pct = Math.min(100, repCount);
+  const fill = document.getElementById('rep-fill');
+  const label = document.getElementById('rep-label');
+  const icon  = document.getElementById('rep-icon');
+  const status = document.getElementById('rep-status');
+
+  fill.style.width = pct + '%';
+  label.textContent = repCount + ' / 100';
+
+  if (repCount >= 100) {
+    fill.style.background = 'rgba(240,150,122,0.5)';
+    label.style.color = '#f0967a';
+    icon.textContent = '🏁';
+    status.textContent = 'PATTA per regola delle 50 mosse! Il motore restituisce 0 cp.';
+  } else if (repCount >= 75) {
+    fill.style.background = 'rgba(240,150,122,0.3)';
+    label.style.color = '#f0967a';
+    icon.textContent = '⚠️';
+    status.textContent = `Pericolo patta (${repCount}/100). Il motore inizia a tenere conto del rischio.`;
+  } else if (repCount >= 40) {
+    fill.style.background = 'rgba(175,169,240,0.3)';
+    label.style.color = '#afa9f0';
+    icon.textContent = '🕐';
+    status.textContent = `Contatore: ${repCount}/100. Zona di attenzione — nessuna cattura né mossa pedone da molte mosse.`;
+  } else {
+    fill.style.background = 'rgba(200,197,188,0.3)';
+    label.style.color = 'var(--accent-color)';
+    icon.textContent = '🕐';
+    status.textContent = `Contatore: ${repCount}/100. Posizione normale.`;
+  }
+}
+
+function repAdd(n) {
+  repCount = Math.min(100, repCount + n);
+  repUpdate();
+}
+
+function repReset() {
+  repCount = 0;
+  repUpdate();
+  document.getElementById('rep-icon').textContent = '♟';
+  document.getElementById('rep-status').textContent = 'Reset! Cattura o mossa pedone — contatore azzerato.';
+}
+
+function initAll(){ttReset();repUpdate();}
+
+const obs = new IntersectionObserver(entries => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('visible'), i * 80);
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+window.addEventListener('load', initAll);
+</script>
+<script src="gmvt-intro.js"></script>
+</body>
+</html>

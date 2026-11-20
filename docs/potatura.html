@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GMVT — Potatura</title>
+  <link rel="icon" type="image/x-icon" href="images/favicon.ico" >
+  <link rel="stylesheet" href="gmvt-shared.css" />
+  <style>
+    :root {
+      --accent-color: #f0967a;
+      --accent-rgb:   240, 150, 122;
+      --green: #00ff88;
+      --green-dim: #00cc6a;
+      --green-faint: rgba(0,255,136,0.07);
+      --green-glow: rgba(0,255,136,0.22);
+      --bg: #050505;
+      --border: rgba(0,255,136,0.18);
+      --border-hover: rgba(0,255,136,0.50);
+      --text: #f0fff0;
+      --text-mid: #b8d4b8;
+      --text-dim: #8aac8a;
+      --mono: 'Share Tech Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+    .nav-link { font-family: var(--mono); color: var(--text-mid) !important; font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.4rem 0.9rem !important; transition: color 0.2s; }
+    .nav-link:hover { color: var(--green) !important; }
+    .cutoff-tree {
+      background: var(--bg-code); border: 1px solid var(--border);
+      padding: 1.5rem; overflow-x: auto;
+    }
+    .tree-row { display: flex; align-items: center; margin-bottom: 0.3rem; white-space: nowrap; }
+    .tree-indent { display: inline-block; width: 2rem; flex-shrink: 0; }
+    .tree-node {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      font-family: var(--mono); font-size: 0.78rem;
+      border: 1px solid; padding: 0.3rem 0.75rem; cursor: default;
+    }
+    .tree-node.root   { border-color: #f0967a; color: #f0967a; background: rgba(240,150,122,0.08); }
+    .tree-node.pruned { border-color: rgba(240,150,122,0.4); color: #f0967a; background: rgba(240,150,122,0.06); opacity: 0.4; text-decoration: line-through; }
+    .tree-node.active { border-color: rgba(0,255,136,0.5); color: var(--green); background: rgba(0,255,136,0.07); }
+    .tree-node.ok     { border-color: rgba(93,202,165,0.4); color: #5dcaa5; background: rgba(93,202,165,0.05); }
+    .tree-label { font-family: var(--mono); font-size: 0.68rem; color: var(--text-dim); padding-left: 0.8rem; }
+
+    /* ── Board canvas styles (same as ricerca) ── */
+
+    /* diff table */
+    .diff-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    .diff-table th { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.14em; color: var(--text-dim); text-transform: uppercase; text-align: left; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--border); }
+    .diff-table td { font-size: 0.85rem; color: var(--text-mid); padding: 0.55rem 0.8rem; border-bottom: 1px solid rgba(0,255,136,0.04); }
+    .diff-table tr:last-child td { border-bottom: none; }
+    .diff-table .yes { color: #5dcaa5; font-family: var(--mono); font-size: 0.8rem; }
+    .diff-table .no  { color: #f0967a; font-family: var(--mono); font-size: 0.8rem; }
+    .diff-table tr:hover td { background: rgba(240,150,122,0.03); }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">GMVT</a>
+  <div style="display:flex; align-items:center; gap:2rem;">
+    <a class="nav-back" href="index.html"> Algoritmi</a>
+    <ul class="navbar-nav">
+      <li><a class="nav-link" href="ricerca.html">← Ricerca</a></li>
+      <li><a class="nav-link" href="estensioni.html">Estensioni →</a></li>
+    </ul>
+  </div>
+</nav>
+
+<section class="page-hero">
+  <div class="page-hero-grid"></div>
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem; position:relative; z-index:2;">
+    <div class="page-tag">✂️ Categoria 2 / 5</div>
+    <h1 class="page-title">Potatura<span>.</span></h1>
+    <p class="page-intro">
+      Cercare ogni mossa possibile è impossibile: ci sono più posizioni scacchistiche 
+      che atomi nell'universo. La potatura elimina i rami inutili <em>prima</em> di esplorarli, 
+      rendendo la ricerca centinaia di volte più veloce senza perdere qualità.
+    </p>
+    <div class="page-pills">
+      <span class="pill"><a class="nav-link" href="#AlphaBeta">Alpha-Beta Pruning</a></span><!--<a class="nav-link" href="#MDR">Mate Distance Pruning</a>-->
+      <span class="pill"><a class="nav-link" href="#NMR">Null Move Pruning</a></span>
+      <span class="pill"><a class="nav-link" href="#RFP">Reverse Futility Pruning</a></span>
+      <span class="pill"><a class="nav-link" href="#LMR">Late Move Reduction</a></span>
+      <span class="pill"><a class="nav-link" href="#MDR">ProbCut</a></span>
+      <span class="pill"><a class="nav-link" href="#MDR">Mate Distance Pruning</a></span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="AlphaBeta">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">algoritmo 01</div>
+    <h2 class="section-heading">Alpha-Beta Pruning</h2>
+
+    <div class="section-body mb-3">
+      L'<strong>Alpha-Beta Pruning</strong> è il cuore del motore: una versione ottimizzata 
+      di Minimax che mantiene due valori, <strong>α</strong> (il meglio che il massimizzatore 
+      può garantire) e <strong>β</strong> (il meglio che il minimizzatore può garantire). 
+      Quando β ≤ α, la ricerca del sottoalbero corrente viene interrotta: nessun risultato 
+      può influenzare la decisione finale.
+      <br><br>
+      Nel caso peggiore, Alpha-Beta esplora gli stessi nodi di Minimax. Nel caso ottimale 
+      (mosse ordinate perfettamente) riduce il fattore di ramificazione da <strong>b</strong> 
+      a <strong>√b</strong> — raddoppiando la profondità raggiungibile a parità di tempo.
+    </div>
+
+    <div class="complexity-row fade-up">
+      <div class="complexity-badge"><div class="cb-label">Caso peggiore</div><div class="cb-value">O(b<sup>d</sup>)</div></div>
+      <div class="complexity-badge"><div class="cb-label">Caso ottimale</div><div class="cb-value">O(b<sup>d/2</sup>)</div></div>
+      <div class="complexity-badge"><div class="cb-label">Risparmio nodi</div><div class="cb-value">~60-70%</div></div>
+      <div class="complexity-badge"><div class="cb-label">Profondità eff.</div><div class="cb-value">2×</div></div>
+    </div>
+
+    <!-- Albero visivo Alpha-Beta -->
+    <div class="cutoff-tree fade-up" style="margin:1.5rem 0;">
+      <div class="tree-row">
+        <div class="tree-node root">Radice [α=-∞, β=+∞]</div>
+        <div class="tree-label">// nodo massimizzatore</div>
+      </div>
+      <div class="tree-row">
+        <div class="tree-indent"></div>
+        <div class="tree-node active">Figlio A → valore: +80</div>
+        <div class="tree-label">// aggiorna α = 80</div>
+      </div>
+      <div class="tree-row">
+        <div class="tree-indent"></div>
+        <div class="tree-node active">Figlio B → esplorazione inizia…</div>
+        <div class="tree-label">// minimo: cerca ≤ 80</div>
+      </div>
+      <div class="tree-row">
+        <div class="tree-indent"></div><div class="tree-indent"></div>
+        <div class="tree-node ok">Nipote B1 → +60</div>
+        <div class="tree-label">// β = 60, ora β &lt; α</div>
+      </div>
+      <div class="tree-row">
+        <div class="tree-indent"></div><div class="tree-indent"></div>
+        <div class="tree-node pruned">Nipote B2 — TAGLIATO ✂</div>
+        <div class="tree-label">// β ≤ α → cutoff!</div>
+      </div>
+      <div class="tree-row">
+        <div class="tree-indent"></div><div class="tree-indent"></div>
+        <div class="tree-node pruned">Nipote B3 — TAGLIATO ✂</div>
+        <div class="tree-label">// inutile esplorare</div>
+      </div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">minimax.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="kw">int</span> <span class="fn">minimax</span>(<span class="tp">Scacchiera</span>&amp; <span class="var">s</span>, <span class="kw">int</span> <span class="var">prof</span>, <span class="kw">int</span> <span class="var">alfa</span>, <span class="kw">int</span> <span class="var">beta</span>)
+{
+    <span class="kw">if</span> (<span class="var">prof</span> == <span class="num">0</span>) <span class="kw">return</span> <span class="fn">quiescence</span>(<span class="var">s</span>, <span class="var">alfa</span>, <span class="var">beta</span>);
+
+    <span class="kw">for</span> (<span class="kw">auto</span>&amp; <span class="var">mossa</span> : <span class="fn">genera_mosse</span>(<span class="var">s</span>))
+    {
+        <span class="fn">esegui_mossa</span>(<span class="var">s</span>, <span class="var">mossa</span>);
+        <span class="kw">int</span> <span class="var">val</span> = <span class="op">-</span><span class="fn">minimax</span>(<span class="var">s</span>, <span class="var">prof</span><span class="op">-</span><span class="num">1</span>, <span class="op">-</span><span class="var">beta</span>, <span class="op">-</span><span class="var">alfa</span>);
+        <span class="fn">annulla_mossa</span>(<span class="var">s</span>, <span class="var">mossa</span>);
+
+        <span class="kw">if</span> (<span class="var">val</span> &gt;= <span class="var">beta</span>)
+<span class="hl">            <span class="kw">return</span> <span class="var">beta</span>;  <span class="cm">// ✂ beta cutoff: il padre minimizzatore ignorerà questo</span></span>
+
+        <span class="kw">if</span> (<span class="var">val</span> &gt; <span class="var">alfa</span>)
+            <span class="var">alfa</span> = <span class="var">val</span>;  <span class="cm">// nuovo lower bound</span>
+    }
+    <span class="kw">return</span> <span class="var">alfa</span>;
+}</pre>
+      </div>
+    </div>
+
+    <div class="callout fade-up">
+      <div class="callout-icon">💡</div>
+      <div class="callout-content">
+        <div class="callout-title">Ordine delle mosse — chiave per l'efficienza</div>
+        <div class="callout-text">
+          L'efficacia di Alpha-Beta dipende <strong>criticamente</strong> dall'ordine in cui le mosse 
+          vengono esaminate. GMVT ordina: catture (MVV-LVA), mosse killer, mosse della TT, 
+          history heuristic. Con ordinamento ottimale si raggiunge il <strong>caso O(b<sup>d/2</sup>)</strong>.
+        </div>
+      </div>
+    </div>
+
+    
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="NMR">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">algoritmo 02</div>
+    <h2 class="section-heading">Null Move Pruning</h2>
+
+    <div class="section-body mb-3">
+      Il <strong>Null Move Pruning (NMP)</strong> si basa su un'idea semplice: se il giocatore 
+      <em>non fa nulla</em> (passa il turno) e la ricerca ridotta ritorna ancora un valore &gt; β, 
+      allora la posizione è talmente buona per il giocatore corrente che qualsiasi mossa reale 
+      sarà almeno altrettanto buona — quindi possiamo tagliare il ramo.
+      <br><br>
+      In GMVT viene applicato con riduzione <strong>R = 3</strong> (la ricerca null viene fatta 
+      a profondità <code style="font-family:var(--mono);color:var(--accent-color)">prof - R - 1</code>) 
+      e viene disattivato in posizioni di zugzwang (solo pedoni, finale).
+    </div>
+
+    <div class="complexity-row fade-up">
+      <div class="complexity-badge"><div class="cb-label">Riduzione R</div><div class="cb-value">3 ply</div></div>
+      <div class="complexity-badge"><div class="cb-label">Risparmio</div><div class="cb-value">~15-25%</div></div>
+      <div class="complexity-badge"><div class="cb-label">Disattivato</div><div class="cb-value">Zugzwang</div></div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">null_move.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="cm">// NMP: prova a passare il turno e cerca con profondità ridotta</span>
+<span class="kw">if</span> (!<span class="var">in_scacco</span> && <span class="var">prof</span> &gt;= <span class="num">3</span> && !<span class="fn">solo_pedoni</span>(<span class="var">s</span>))
+{
+<span class="hl">    <span class="fn">esegui_mossa_nulla</span>(<span class="var">s</span>);  <span class="cm">// passa il turno</span></span>
+    <span class="kw">int</span> <span class="var">val</span> = <span class="op">-</span><span class="fn">minimax</span>(<span class="var">s</span>, <span class="var">prof</span> <span class="op">-</span> <span class="num">3</span> <span class="op">-</span> <span class="num">1</span>, <span class="op">-</span><span class="var">beta</span>, <span class="op">-</span><span class="var">beta</span><span class="op">+</span><span class="num">1</span>);
+    <span class="fn">annulla_mossa_nulla</span>(<span class="var">s</span>);
+
+<span class="hl">    <span class="kw">if</span> (<span class="var">val</span> &gt;= <span class="var">beta</span>)          <span class="cm">// anche senza muovere, siamo oltre β</span></span>
+<span class="hl">        <span class="kw">return</span> <span class="var">beta</span>;          <span class="cm">// ✂ cutoff garantito</span></span>
+}</pre>
+      </div>
+    </div>
+
+    <div class="callout fade-up">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-content">
+        <div class="callout-title">Zugzwang — il caso pericoloso</div>
+        <div class="callout-text">
+          Nei finali con solo pedoni, <strong>qualsiasi mossa potrebbe peggiorare la posizione</strong> 
+          (zugzwang). In questi casi NMP è disattivato perché passare il turno 
+          darebbe un'immagine falsamente positiva della situazione.
+        </div>
+      </div>
+    </div>
+
+    
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="RFP">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">algoritmo 03</div>
+    <h2 class="section-heading">Reverse Futility Pruning</h2>
+
+    <div class="section-body mb-3">
+      Il <strong>Reverse Futility Pruning (RFP)</strong> — anche detto <em>static null move pruning</em> — 
+      è una tecnica che evita di esplorare un nodo quando la valutazione statica è già così alta 
+      da superare β di un margine prestabilito. In pratica: se la posizione è talmente buona 
+      <em>senza neanche cercare</em>, non vale la pena continuare.
+      <br><br>
+      In GMVT il margine cresce con la profondità residua: 
+      <code style="font-family:var(--mono);color:var(--accent-color)">margine = 80 × prof</code>.
+    </div>
+
+    <div class="complexity-row fade-up">
+      <div class="complexity-badge"><div class="cb-label">Margine base</div><div class="cb-value">80 cp</div></div>
+      <div class="complexity-badge"><div class="cb-label">Margine a d=3</div><div class="cb-value">240 cp</div></div>
+      <div class="complexity-badge"><div class="cb-label">Profondità max</div><div class="cb-value">d ≤ 6</div></div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">rfp.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="cm">// RFP: taglia se eval statica supera β di abbastanza</span>
+<span class="kw">if</span> (<span class="var">prof</span> &lt;= <span class="num">6</span> && !<span class="var">in_scacco</span>)
+{
+    <span class="kw">int</span> <span class="var">eval</span> = <span class="fn">valuta</span>(<span class="var">s</span>);
+    <span class="kw">int</span> <span class="var">margine</span> = <span class="num">80</span> <span class="op">*</span> <span class="var">prof</span>;
+
+<span class="hl">    <span class="kw">if</span> (<span class="var">eval</span> <span class="op">-</span> <span class="var">margine</span> &gt;= <span class="var">beta</span>)   <span class="cm">// anche nel caso peggiore siamo sopra β</span></span>
+<span class="hl">        <span class="kw">return</span> <span class="var">eval</span> <span class="op">-</span> <span class="var">margine</span>;   <span class="cm">// ✂ RFP cutoff</span></span>
+}</pre>
+      </div>
+    </div>
+
+    <div class="diagram-wrap fade-up">
+      <svg viewBox="0 0 700 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:700px;display:block;margin:0 auto">
+        <defs>
+          <marker id="arr-rfp" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="rgba(240,150,122,0.7)"/>
+          </marker>
+        </defs>
+        <!-- scala -->
+        <rect x="60" y="60" width="580" height="40" rx="2" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+        <text x="60" y="55" font-family="Share Tech Mono" font-size="10" fill="rgba(240,150,122,0.5)" text-anchor="middle">-∞</text>
+        <text x="640" y="55" font-family="Share Tech Mono" font-size="10" fill="rgba(240,150,122,0.5)" text-anchor="middle">+∞</text>
+        <!-- beta line -->
+        <line x1="420" y1="55" x2="420" y2="105" stroke="rgba(240,150,122,0.8)" stroke-width="2" stroke-dasharray="4,3"/>
+        <text x="420" y="48" font-family="Share Tech Mono" font-size="10" fill="#f0967a" text-anchor="middle">β</text>
+        <!-- eval line -->
+        <line x1="520" y1="55" x2="520" y2="105" stroke="rgba(0,255,136,0.8)" stroke-width="2"/>
+        <text x="520" y="48" font-family="Share Tech Mono" font-size="10" fill="var(--green)" text-anchor="middle">eval statica</text>
+        <!-- margin bracket -->
+        <line x1="420" y1="80" x2="520" y2="80" stroke="rgba(175,169,240,0.6)" stroke-width="1.5" marker-end="url(#arr-rfp)"/>
+        <text x="470" y="95" font-family="Share Tech Mono" font-size="9" fill="#afa9f0" text-anchor="middle">margine = 80×d</text>
+        <text x="350" y="130" font-family="Share Tech Mono" font-size="10" fill="rgba(240,150,122,0.55)" text-anchor="middle">eval - margine ≥ β → RFP cutoff ✂</text>
+      </svg>
+      <div class="diagram-caption">// Schema RFP: se la valutazione statica supera β di almeno il margine, il nodo viene potato</div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="LMR">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">algoritmo 04</div>
+    <h2 class="section-heading">Late Move Reduction (LMR)</h2>
+
+    <div class="section-body mb-3">
+      Le ultime mosse nell'elenco dei candidati (quelle con score di ordinamento più basso) 
+      hanno meno probabilità di essere buone. <strong>LMR</strong> le cerca a profondità ridotta: 
+      se il risultato ridotto supera α, allora — e solo allora — viene fatta una ri-ricerca 
+      a profondità piena.
+      <br><br>
+      In GMVT la riduzione base è di <strong>1 ply</strong> per le mosse oltre la 4ª, 
+      con un incremento logaritmico per profondità e numero di mossa:
+      <code style="font-family:var(--mono);color:var(--accent-color)">R = 1 + log(prof) × log(nmossa) / 2</code>
+    </div>
+
+    <div class="complexity-row fade-up">
+      <div class="complexity-badge"><div class="cb-label">Attiva da</div><div class="cb-value">mossa 4+</div></div>
+      <div class="complexity-badge"><div class="cb-label">Riduzione min</div><div class="cb-value">1 ply</div></div>
+      <div class="complexity-badge"><div class="cb-label">Risparmio</div><div class="cb-value">~30-40%</div></div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">lmr.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="kw">int</span> <span class="var">nmossa</span> = <span class="num">0</span>;
+<span class="kw">for</span> (<span class="kw">auto</span>&amp; <span class="var">m</span> : <span class="fn">mosse_ordinate</span>(<span class="var">s</span>))
+{
+    <span class="fn">esegui_mossa</span>(<span class="var">s</span>, <span class="var">m</span>); <span class="var">nmossa</span><span class="op">++</span>;
+
+    <span class="kw">int</span> <span class="var">rid</span> = <span class="num">0</span>;
+<span class="hl">    <span class="kw">if</span> (<span class="var">nmossa</span> &gt; <span class="num">4</span> && <span class="var">prof</span> &gt;= <span class="num">3</span> && !<span class="var">in_scacco</span> && !<span class="fn">e_cattura</span>(<span class="var">m</span>))</span>
+<span class="hl">        <span class="var">rid</span> = <span class="num">1</span> + (<span class="kw">int</span>)(log(<span class="var">prof</span>) <span class="op">*</span> log(<span class="var">nmossa</span>) / <span class="num">2.0</span>);  <span class="cm">// riduzione LMR</span></span>
+
+    <span class="kw">int</span> <span class="var">val</span> = <span class="op">-</span><span class="fn">minimax</span>(<span class="var">s</span>, <span class="var">prof</span><span class="op">-</span><span class="num">1</span><span class="op">-</span><span class="var">rid</span>, <span class="op">-</span><span class="var">alfa</span><span class="op">-</span><span class="num">1</span>, <span class="op">-</span><span class="var">alfa</span>);
+    <span class="kw">if</span> (<span class="var">val</span> &gt; <span class="var">alfa</span> && <span class="var">rid</span> &gt; <span class="num">0</span>)
+    {
+<span class="hl">        <span class="var">val</span> = <span class="op">-</span><span class="fn">minimax</span>(<span class="var">s</span>, <span class="var">prof</span><span class="op">-</span><span class="num">1</span>, <span class="op">-</span><span class="var">beta</span>, <span class="op">-</span><span class="var">alfa</span>); <span class="cm">// ri-cerca piena</span></span>
+    }
+    <span class="fn">annulla_mossa</span>(<span class="var">s</span>, <span class="var">m</span>);
+    <span class="kw">if</span> (<span class="var">val</span> &gt;= <span class="var">beta</span>) <span class="kw">return</span> <span class="var">beta</span>;
+    <span class="kw">if</span> (<span class="var">val</span> &gt; <span class="var">alfa</span>) <span class="var">alfa</span> = <span class="var">val</span>;
+}</pre>
+      </div>
+    </div>
+
+    
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="MDR">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">algoritmi 05–06</div>
+    <h2 class="section-heading">ProbCut &amp; Mate Distance Pruning</h2>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem; margin-bottom:2rem;" class="fade-up">
+      <div>
+        <div class="concept-card">
+          <div class="concept-num">05</div>
+          <div class="concept-label">ProbCut</div>
+          <div class="concept-title">Taglio probabilistico a profondità ridotta</div>
+          <div class="concept-text">
+            Prima di esplorare un nodo a profondità piena, GMVT esegue una ricerca 
+            superficiale <strong>(prof - R)</strong>. Se il risultato supera una soglia 
+            <code style="font-family:var(--mono);color:var(--accent-color)">beta + margine</code> 
+            con alta probabilità, il nodo viene tagliato. 
+            Utile specialmente nelle catture dove il guadagno materiale è già evidente.
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="concept-card">
+          <div class="concept-num">06</div>
+          <div class="concept-label">Mate Distance</div>
+          <div class="concept-title">Potatura basata sulla distanza dal matto</div>
+          <div class="concept-text">
+            Se il bot ha già trovato un matto a N mosse, non serve esplorare rami 
+            che portano a un matto più lungo. GMVT adatta α e β in base alla 
+            distanza massima possibile da matto:
+            <code style="font-family:var(--mono);color:var(--accent-color)">alfa = max(alfa, -MATTO + ply)</code>. 
+            Elimina molte ricerche inutili nei finali tattici.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">mate_distance.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="cm">// Mate Distance Pruning — eseguito all'inizio di ogni nodo</span>
+<span class="kw">const</span> <span class="kw">int</span> <span class="var">MATTO</span> = <span class="num">32000</span>;
+
+<span class="kw">int</span> <span class="var">matto_alpha</span> = <span class="op">-</span><span class="var">MATTO</span> <span class="op">+</span> <span class="var">ply</span>;
+<span class="kw">int</span> <span class="var">matto_beta</span>  = <span class="var">MATTO</span>  <span class="op">-</span> <span class="var">ply</span>;
+
+<span class="kw">if</span> (<span class="var">matto_alpha</span> &gt;= <span class="var">beta</span>)  <span class="kw">return</span> <span class="var">matto_alpha</span>;
+<span class="kw">if</span> (<span class="var">matto_beta</span>  &lt;= <span class="var">alfa</span>)  <span class="kw">return</span> <span class="var">matto_beta</span>;
+
+<span class="hl"><span class="var">alfa</span> = <span class="fn">max</span>(<span class="var">alfa</span>, <span class="var">matto_alpha</span>);  <span class="cm">// stringe la finestra verso il matto vicino</span></span>
+<span class="hl"><span class="var">beta</span> = <span class="fn">min</span>(<span class="var">beta</span>, <span class="var">matto_beta</span>);</span></pre>
+      </div>
+    </div>
+
+    <table class="diff-table fade-up">
+      <tr>
+        <th>Tecnica</th>
+        <th>Quando si applica</th>
+        <th>Risparmio tipico</th>
+        <th>Rischio</th>
+      </tr>
+      <tr><td>Alpha-Beta</td><td>Sempre</td><td class="yes">50-70%</td><td>Nessuno (esatto)</td></tr>
+      <tr><td>Null Move Pruning</td><td>Non in scacco, non zugzwang</td><td class="yes">15-25%</td><td>Raro errore tattico</td></tr>
+      <tr><td>RFP</td><td>Profondità ≤ 6, non in scacco</td><td class="yes">5-10%</td><td>Minimo</td></tr>
+      <tr><td>LMR</td><td>Mosse oltre la 4ª</td><td class="yes">30-40%</td><td>Ri-ricerca se necessario</td></tr>
+      <tr><td>ProbCut</td><td>Catture ad alta profondità</td><td class="yes">5-8%</td><td>Raro miss tattico</td></tr>
+      <tr><td>Mate Distance</td><td>Quando matto è vicino</td><td class="yes">1-5%</td><td>Nessuno (esatto)</td></tr>
+    </table>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+  <nav class="page-nav">
+    <a href="ricerca.html" class="page-nav-btn prev">
+      <span class="pnb-arrow">←</span>
+      <div><div class="pnb-label">Precedente</div><div class="pnb-title">Ricerca</div></div>
+    </a>
+    <a href="estensioni.html" class="page-nav-btn">
+      <div><div class="pnb-label">Successivo</div><div class="pnb-title">Estensioni</div></div>
+      <span class="pnb-arrow">→</span>
+    </a>
+  </nav>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-brand">GMVT</div>
+  <div class="site-footer-copy">// chess engine · C++ · 2025–2026</div>
+</footer>
+
+<script>
+function initAll() {}
+
+const obs = new IntersectionObserver(entries => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('visible'), i * 80);
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+window.addEventListener('load', initAll);
+</script>
+<script src="gmvt-intro.js"></script>
+</body>
+</html>

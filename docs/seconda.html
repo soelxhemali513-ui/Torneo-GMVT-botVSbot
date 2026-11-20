@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>GMVT - Retro Biglietto da Visita</title>
+    <style>
+        /* Impostazioni del biglietto (proporzioni standard 85mm x 55mm) */
+        .business-card-back {
+            width: 850px;
+            height: 500px;
+            background-color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 40px;
+            box-sizing: border-box;
+            border: 1px solid #e0e0e0; /* Solo come riferimento per il taglio */
+        }
+
+        /* Effetto fulmini/energia verde stilizzato sullo sfondo */
+        .background-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(0, 230, 118, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(0, 230, 118, 0.1) 0%, transparent 50%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Linee dinamiche che ricordano le scariche elettriche del fronte */
+        .background-effect::before, .background-effect::after {
+            content: "";
+            position: absolute;
+            background: linear-gradient(45deg, transparent, rgba(0, 230, 118, 0.15), transparent);
+            transform: rotate(-35deg);
+        }
+        .background-effect::before { top: 10%; left: -10%; width: 120%; height: 2px; }
+        .background-effect::after { bottom: 20%; right: -10%; width: 100%; height: 1px; }
+
+        /* Contenuto principale */
+        .content {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Colonna di sinistra: Nomi e Collaboratori */
+        .team-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-right: 20px;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 900;
+            color: #000000;
+            letter-spacing: 2px;
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            font-weight: 600;
+            color: #00E676; /* Verde fluo */
+            letter-spacing: 4px;
+            margin: 0 0 35px 0;
+            text-transform: uppercase;
+        }
+
+        .member-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .member-item {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Indicatore classe in verde fluo */
+        .class-tag {
+            background-color: #000000;
+            color: #00E676;
+            font-size: 12px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-left: 10px;
+            letter-spacing: 1px;
+        }
+
+        /* Colonna di destra: QR Code e info */
+        .qr-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 240px;
+        }
+
+        .qr-container {
+            width: 180px;
+            height: 180px;
+            background: #ffffff;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            border: 2px solid #00E676; /* Bordo verde per unire il design al QR */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .qr-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .scan-text {
+            font-size: 11px;
+            font-weight: 600;
+            color: #666666;
+            margin-top: 15px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="business-card-back">
+        <div class="background-effect"></div>
+
+        <div class="content">
+            
+            <div class="team-section">
+                <h1 class="title">GMVT Chess Engine</h1>
+                <div class="subtitle">Sviluppo & Algoritmi</div>
+                
+                <ul class="member-list">
+                    <li class="member-item">Soel Xhemali <span class="class-tag">3A</span></li>
+                    <li class="member-item">Tahiri Mohammed Amine <span class="class-tag">3A</span></li>
+                    <li class="member-item">Bardellotto Ludovico <span class="class-tag">3B</span></li>
+                </ul>
+            </div>
+
+            <div class="qr-section">
+                <div class="qr-container">
+                    <img src="WhatsApp Image 2026-05-20 at 22.46.28.jpeg" alt="QR Code GMVT">
+                </div>
+                <div class="scan-text">Scansiona per testare il motore</div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

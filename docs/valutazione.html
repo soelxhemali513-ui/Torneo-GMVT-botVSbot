@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GMVT — Valutazione</title>
+  <link rel="icon" type="image/x-icon" href="images/favicon.ico" > 
+  <link rel="stylesheet" href="gmvt-shared.css" />
+  <style>
+    :root {
+      --accent-color: #85b7eb;
+      --accent-rgb:   133, 183, 235;
+      --green: #00ff88;
+      --green-dim: #00cc6a;
+      --green-faint: rgba(0,255,136,0.07);
+      --green-glow: rgba(0,255,136,0.22);
+      --bg: #050505;
+      --border: rgba(0,255,136,0.18);
+      --border-hover: rgba(0,255,136,0.50);
+      --text: #f0fff0;
+      --text-mid: #b8d4b8;
+      --text-dim: #8aac8a;
+      --mono: 'Share Tech Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+    .nav-link { font-family: var(--mono); color: var(--text-mid) !important; font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.4rem 0.9rem !important; transition: color 0.2s; }
+    .nav-link:hover { color: var(--green) !important; }
+   
+    /* PST heatmap grid */
+    .pst-grid {
+      display: grid; grid-template-columns: repeat(8, 1fr);
+      gap: 2px; max-width: 320px; margin: 1rem 0;
+    }
+    .pst-cell {
+      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 0.62rem; position: relative;
+      transition: transform 0.2s;
+    }
+    .pst-cell:hover { transform: scale(1.1); z-index: 2; }
+
+    /* Tapered eval bar */
+    .taper-wrap { margin: 1.5rem 0; }
+    .taper-track { height: 32px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); position: relative; overflow: hidden; }
+    .taper-mg { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(133,183,235,0.3); display: flex; align-items: center; padding: 0 0.5rem; }
+    .taper-eg { position: absolute; right: 0; top: 0; bottom: 0; background: rgba(93,202,165,0.3); display: flex; align-items: center; justify-content: flex-end; padding: 0 0.5rem; }
+    .taper-cursor { position: absolute; top: 0; bottom: 0; width: 3px; background: var(--green); box-shadow: 0 0 8px rgba(0,255,136,0.5); transition: left 0.5s ease; }
+    .taper-labels { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.65rem; color: var(--text-dim); margin-top: 0.3rem; }
+    .taper-controls { display: flex; gap: 0.5rem; margin-top: 0.8rem; flex-wrap: wrap; }
+    .taper-btn {
+      font-family: var(--mono); font-size: 0.72rem; color: var(--accent-color);
+      border: 1px solid rgba(133,183,235,0.3); background: rgba(133,183,235,0.07);
+      padding: 0.35rem 0.85rem; cursor: pointer; text-transform: uppercase; transition: background 0.2s;
+    }
+    .taper-btn:hover { background: rgba(133,183,235,0.15); }
+
+    /* Component breakdown */
+    .eval-breakdown { background: var(--bg-code); border: 1px solid var(--border); padding: 1.2rem; margin: 1.5rem 0; }
+    .eb-title { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.18em; color: var(--accent-color); text-transform: uppercase; margin-bottom: 1rem; }
+    .eb-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .eb-label { font-family: var(--mono); font-size: 0.72rem; color: var(--text-dim); width: 200px; flex-shrink: 0; }
+    .eb-bar-track { flex: 1; height: 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); position: relative; overflow: hidden; }
+    .eb-bar-pos { height: 100%; background: rgba(133,183,235,0.4); transition: width 0.5s ease; display: flex; align-items: center; padding: 0 0.3rem; }
+    .eb-bar-neg { height: 100%; background: rgba(240,150,122,0.4); transition: width 0.5s ease; float: right; display: flex; align-items: center; justify-content: flex-end; padding: 0 0.3rem; }
+    .eb-val { font-family: var(--mono); font-size: 0.68rem; color: var(--text-dim); width: 60px; text-align: right; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">GMVT</a>
+  <div style="display:flex; align-items:center; gap:2rem;">
+    <a class="nav-back" href="index.html"> Algoritmi</a>
+    <ul class="navbar-nav">
+      <li><a class="nav-link" href="estensioni.html">← Estensioni</a></li>
+      <li><a class="nav-link" href="infrastruttura.html">Infrastruttura →</a></li>
+    </ul>
+  </div>
+</nav>
+
+<section class="page-hero">
+  <div class="page-hero-grid"></div>
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem; position:relative; z-index:2;">
+    <div class="page-tag">⚖️ Categoria 4 / 5</div>
+    <h1 class="page-title">Valutazione<span>.</span></h1>
+    <p class="page-intro">
+      Quando la ricerca raggiunge la profondità massima, deve dare un numero alla posizione. 
+      Questo numero — la <em>valutazione statica</em> — combina materiale, posizione dei pezzi, 
+      struttura pedonale, sicurezza del re e molto altro in un singolo centipedone.
+    </p>
+    <div class="page-pills">
+      <span class="pill"><a class="nav-link" href="#PST">Piece-Square Tables</a></span><!--<a class="nav-link" href="#MDR">Coppia Alfieri</a>-->
+      <span class="pill"><a class="nav-link" href="#TaperedEvaluation">Tapered Eval</a></span>
+      <span class="pill"><a class="nav-link" href="#StrutturaPedonale">Struttura Pedonale</a></span>
+      <span class="pill"><a class="nav-link" href="#StrutturaPedonale">Sicurezza del Re</a></span>
+      <span class="pill"><a class="nav-link" href="#MobilitaEBonus">Mobilità</a></span>
+      <span class="pill"><a class="nav-link" href="#MobilitaEBonus">Coppia Alfieri</a></span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="PST">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">componente 01</div>
+    <h2 class="section-heading">Piece-Square Tables (PST)</h2>
+
+    <div class="section-body mb-3">
+      Le <strong>Piece-Square Tables</strong> assegnano un bonus (o malus) a ogni pezzo 
+      in base alla casella che occupa. Un cavallo in d5 (centro) vale molto di più di 
+      un cavallo in a1 (angolo). GMVT utilizza PST separate per il <strong>middlegame</strong> 
+      e l'<strong>endgame</strong>, interpolate dalla valutazione tapered.
+      <br><br>
+      I valori sono codificati come array 64 interi in centipedoni, 
+      dalla prospettiva del bianco (per il nero vengono ribaltati).
+    </div>
+
+    <!-- Heatmap cavallo -->
+    <div class="fade-up" style="display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start;margin:1.5rem 0;">
+      <div>
+        <div style="font-family:var(--mono);font-size:0.68rem;color:var(--accent-color);letter-spacing:0.14em;margin-bottom:0.5rem;">PST CAVALLO — MIDDLEGAME</div>
+        <div class="pst-grid" id="knight-pst"></div>
+        <div style="font-family:var(--mono);font-size:0.62rem;color:var(--text-dim);margin-top:0.5rem;">// valori in centipedoni bonus/malus</div>
+      </div>
+      <div style="flex:1;min-width:220px;">
+        <div style="font-family:var(--mono);font-size:0.68rem;color:var(--text-dim);letter-spacing:0.12em;margin-bottom:1rem;">LEGENDA COLORI</div>
+        <div style="display:flex;flex-direction:column;gap:0.5rem;">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="width:20px;height:20px;background:rgba(133,183,235,0.8);border:1px solid rgba(133,183,235,0.4);"></div>
+            <span style="font-family:var(--mono);font-size:0.72rem;color:var(--text-mid);">Bonus molto alto (+30 cp)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="width:20px;height:20px;background:rgba(133,183,235,0.35);border:1px solid rgba(133,183,235,0.2);"></div>
+            <span style="font-family:var(--mono);font-size:0.72rem;color:var(--text-mid);">Bonus moderato (+10 cp)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="width:20px;height:20px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.06);"></div>
+            <span style="font-family:var(--mono);font-size:0.72rem;color:var(--text-mid);">Neutro (0 cp)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="width:20px;height:20px;background:rgba(240,150,122,0.35);border:1px solid rgba(240,150,122,0.2);"></div>
+            <span style="font-family:var(--mono);font-size:0.72rem;color:var(--text-mid);">Malus moderato (-10 cp)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="width:20px;height:20px;background:rgba(240,150,122,0.8);border:1px solid rgba(240,150,122,0.4);"></div>
+            <span style="font-family:var(--mono);font-size:0.72rem;color:var(--text-mid);">Malus alto (-20 cp)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">pst.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="cm">// PST Cavallo — valori middlegame (da a8 a h1, prospettiva bianco ribaltata)</span>
+<span class="kw">const</span> <span class="kw">int</span> <span class="var">PST_CAVALLO_MG</span>[<span class="num">64</span>] = {
+  <span class="num">-50</span>,<span class="num">-40</span>,<span class="num">-30</span>,<span class="num">-30</span>,<span class="num">-30</span>,<span class="num">-30</span>,<span class="num">-40</span>,<span class="num">-50</span>,
+  <span class="num">-40</span>,<span class="num">-20</span>,  <span class="num">0</span>,  <span class="num">0</span>,  <span class="num">0</span>,  <span class="num">0</span>,<span class="num">-20</span>,<span class="num">-40</span>,
+  <span class="num">-30</span>,  <span class="num">0</span>, <span class="num">10</span>, <span class="num">15</span>, <span class="num">15</span>, <span class="num">10</span>,  <span class="num">0</span>,<span class="num">-30</span>,
+  <span class="num">-30</span>,  <span class="num">5</span>, <span class="num">15</span>, <span class="num">20</span>, <span class="num">20</span>, <span class="num">15</span>,  <span class="num">5</span>,<span class="num">-30</span>,  <span class="cm">// ← fila 5: bonus centro</span>
+<span class="hl">  <span class="num">-30</span>,  <span class="num">5</span>, <span class="num">15</span>, <span class="num">20</span>, <span class="num">20</span>, <span class="num">15</span>,  <span class="num">5</span>,<span class="num">-30</span>,  <span class="cm">// ← fila 4: bonus massimo</span></span>
+  <span class="num">-30</span>,  <span class="num">0</span>, <span class="num">10</span>, <span class="num">15</span>, <span class="num">15</span>, <span class="num">10</span>,  <span class="num">0</span>,<span class="num">-30</span>,
+  <span class="num">-40</span>,<span class="num">-20</span>,  <span class="num">0</span>,  <span class="num">5</span>,  <span class="num">5</span>,  <span class="num">0</span>,<span class="num">-20</span>,<span class="num">-40</span>,
+  <span class="num">-50</span>,<span class="num">-40</span>,<span class="num">-30</span>,<span class="num">-30</span>,<span class="num">-30</span>,<span class="num">-30</span>,<span class="num">-40</span>,<span class="num">-50</span>  <span class="cm">// angoli: -50!</span>
+};
+
+<span class="cm">// Lettura PST nella valutazione</span>
+<span class="kw">int</span> <span class="fn">valuta_pezzo</span>(<span class="tp">Pezzo</span> <span class="var">p</span>, <span class="kw">int</span> <span class="var">casella</span>, <span class="kw">float</span> <span class="var">fase</span>)
+{
+    <span class="kw">int</span> <span class="var">mg</span> = <span class="var">PST_MG</span>[<span class="var">p</span>.<span class="var">tipo</span>][<span class="var">casella</span>];
+    <span class="kw">int</span> <span class="var">eg</span> = <span class="var">PST_EG</span>[<span class="var">p</span>.<span class="var">tipo</span>][<span class="var">casella</span>];
+    <span class="kw">return</span> <span class="fn">taper</span>(<span class="var">mg</span>, <span class="var">eg</span>, <span class="var">fase</span>);  <span class="cm">// interpolazione lineare</span>
+}</pre>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="TaperedEvaluation">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">componente 02</div>
+    <h2 class="section-heading">Tapered Evaluation</h2>
+
+    <div class="section-body mb-3">
+      Gli scacchi hanno tre fasi: <strong>apertura</strong>, <strong>mediogioco</strong> e 
+      <strong>finale</strong>. Le strategie cambiano radicalmente: nel mediogioco il re deve 
+      stare al sicuro; nel finale deve attivizzarsi e avanzare. 
+      La <strong>Tapered Evaluation</strong> interpola continuamente tra i valori 
+      middlegame (MG) ed endgame (EG) in base al materiale rimasto sulla scacchiera.
+      <br><br>
+      La fase è calcolata sommando il materiale non-pedone: 
+      da un massimo di 24 (posizione iniziale) a 0 (solo re).
+    </div>
+
+    <!-- Tapered slider interattivo -->
+    <div class="taper-wrap fade-up">
+      <div style="font-family:var(--mono);font-size:0.68rem;color:var(--accent-color);letter-spacing:0.16em;margin-bottom:0.5rem;">FASE DI GIOCO — INTERPOLAZIONE IN TEMPO REALE</div>
+      <div class="taper-track">
+        <div class="taper-mg" id="taper-mg-bar" style="width:60%">
+          <span style="font-family:var(--mono);font-size:0.65rem;color:rgba(133,183,235,0.8);">MG</span>
+        </div>
+        <div class="taper-eg" id="taper-eg-bar" style="width:40%">
+          <span style="font-family:var(--mono);font-size:0.65rem;color:rgba(93,202,165,0.8);">EG</span>
+        </div>
+        <div class="taper-cursor" id="taper-cursor" style="left:60%"></div>
+      </div>
+      <div class="taper-labels">
+        <span>Middlegame puro (fase=24)</span>
+        <span id="taper-status-label">Fase: 14/24 — 58% MG + 42% EG</span>
+        <span>Endgame puro (fase=0)</span>
+      </div>
+      <div class="taper-controls">
+        <button class="taper-btn" onclick="taperSet(24)">Apertura</button>
+        <button class="taper-btn" onclick="taperSet(18)">Mediogioco</button>
+        <button class="taper-btn" onclick="taperSet(10)">Transizione</button>
+        <button class="taper-btn" onclick="taperSet(4)">Finale</button>
+        <button class="taper-btn" onclick="taperSet(0)">Solo Re</button>
+      </div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">tapered_eval.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="cm">// Valori di fase per ogni tipo di pezzo (non-pedone)</span>
+<span class="kw">const</span> <span class="kw">int</span> <span class="var">FASE_PEZZO</span>[] = { <span class="num">0</span>, <span class="num">1</span>, <span class="num">1</span>, <span class="num">2</span>, <span class="num">4</span>, <span class="num">0</span> }; <span class="cm">// P,N,B,R,Q,K</span>
+<span class="kw">const</span> <span class="kw">int</span> <span class="var">FASE_MAX</span> = <span class="num">24</span>;
+
+<span class="kw">int</span> <span class="fn">calcola_fase</span>(<span class="tp">Scacchiera</span>&amp; <span class="var">s</span>) {
+    <span class="kw">int</span> <span class="var">fase</span> = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="kw">auto</span>&amp; <span class="var">p</span> : <span class="var">s</span>.<span class="var">pezzi</span>)
+        <span class="var">fase</span> += <span class="var">FASE_PEZZO</span>[<span class="var">p</span>.<span class="var">tipo</span>];
+    <span class="kw">return</span> <span class="fn">min</span>(<span class="var">fase</span>, <span class="var">FASE_MAX</span>);
+}
+
+<span class="cm">// Interpolazione tapered tra MG ed EG</span>
+<span class="kw">int</span> <span class="fn">taper</span>(<span class="kw">int</span> <span class="var">mg</span>, <span class="kw">int</span> <span class="var">eg</span>, <span class="kw">int</span> <span class="var">fase</span>) {
+<span class="hl">    <span class="kw">return</span> (<span class="var">mg</span> <span class="op">*</span> <span class="var">fase</span> + <span class="var">eg</span> <span class="op">*</span> (<span class="var">FASE_MAX</span> <span class="op">-</span> <span class="var">fase</span>)) / <span class="var">FASE_MAX</span>;</span>
+    <span class="cm">// fase=24 → puro MG; fase=0 → puro EG</span>
+}</pre>
+      </div>
+    </div>
+
+    <div class="callout fade-up">
+      <div class="callout-icon">📊</div>
+      <div class="callout-content">
+        <div class="callout-title">Esempio: il re nel tapered eval</div>
+        <div class="callout-text">
+          Nel middlegame il re in d1 (arrocco mancato) ha un <strong>malus di -30 cp</strong>. 
+          Nello stesso endgame, lo stesso re in d4 (centro) ha un <strong>bonus di +25 cp</strong>. 
+          Il tapered eval garantisce questa transizione continua senza salti bruschi.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="StrutturaPedonale">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">componenti 03–04</div>
+    <h2 class="section-heading">Struttura Pedonale &amp; Sicurezza del Re</h2>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-bottom:2rem;" class="fade-up">
+      <div class="concept-card">
+        <div class="concept-num">03</div>
+        <div class="concept-label">Struttura Pedonale</div>
+        <div class="concept-title">Pedoni isolati, doppiati e passati</div>
+        <div class="concept-text">
+          GMVT valuta la struttura pedonale cercando:
+          <br><br>
+          <strong>Pedone isolato</strong> (malus −20 cp): non ha pedoni amici nelle colonne adiacenti — vulnerabile e difficile da difendere.<br><br>
+          <strong>Pedone doppiato</strong> (malus −15 cp): due pedoni dello stesso colore sulla stessa colonna — il retrostante è bloccato.<br><br>
+          <strong>Pedone passato</strong> (bonus +20–50 cp): nessun pedone avversario può fermarlo — potenziale futura regina.
+        </div>
+      </div>
+      <div class="concept-card">
+        <div class="concept-num">04</div>
+        <div class="concept-label">Sicurezza del Re</div>
+        <div class="concept-title">Scudo pedonale e attacchi al re</div>
+        <div class="concept-text">
+          La sicurezza del re è uno dei fattori più importanti nel mediogioco:
+          <br><br>
+          <strong>Scudo pedonale</strong>: GMVT premia i pedoni nelle tre caselle davanti al re dopo l'arrocco (f2, g2, h2 per arrocco corto).<br><br>
+          <strong>Colonne aperte verso il re</strong>: malus se una colonna davanti al re non ha pedoni — le torri avversarie possono penetrare facilmente.<br><br>
+          <strong>Attaccanti vicini</strong>: somma pesata dei pezzi avversari che attaccano la zona del re.
+        </div>
+      </div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">pawn_structure.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="kw">int</span> <span class="fn">valuta_pedoni</span>(<span class="tp">Scacchiera</span>&amp; <span class="var">s</span>)
+{
+    <span class="kw">int</span> <span class="var">score</span> = <span class="num">0</span>;
+
+    <span class="kw">for</span> (<span class="kw">int</span> <span class="var">col</span> = <span class="num">0</span>; <span class="var">col</span> &lt; <span class="num">8</span>; <span class="var">col</span>++)
+    {
+        <span class="kw">int</span> <span class="var">n_bianchi</span> = <span class="fn">pedoni_colonna</span>(<span class="var">s</span>, <span class="tp">BIANCO</span>, <span class="var">col</span>);
+        <span class="kw">int</span> <span class="var">n_neri</span>    = <span class="fn">pedoni_colonna</span>(<span class="var">s</span>, <span class="tp">NERO</span>,   <span class="var">col</span>);
+
+<span class="hl">        <span class="kw">if</span> (<span class="var">n_bianchi</span> &gt; <span class="num">1</span>) <span class="var">score</span> <span class="op">-=</span> <span class="num">15</span> <span class="op">*</span> (<span class="var">n_bianchi</span> <span class="op">-</span> <span class="num">1</span>); <span class="cm">// doppiati</span></span>
+        <span class="kw">if</span> (<span class="var">n_neri</span>    &gt; <span class="num">1</span>) <span class="var">score</span> <span class="op">+=</span> <span class="num">15</span> <span class="op">*</span> (<span class="var">n_neri</span> <span class="op">-</span> <span class="num">1</span>);
+
+        <span class="cm">// Pedone isolato: nessun amico nelle colonne adiacenti</span>
+        <span class="kw">bool</span> <span class="var">iso_b</span> = !<span class="fn">pedoni_adiacenti</span>(<span class="var">s</span>, <span class="tp">BIANCO</span>, <span class="var">col</span>);
+<span class="hl">        <span class="kw">if</span> (<span class="var">n_bianchi</span> &gt; <span class="num">0</span> && <span class="var">iso_b</span>) <span class="var">score</span> <span class="op">-=</span> <span class="num">20</span>;  <span class="cm">// malus isolato</span></span>
+    }
+
+    <span class="cm">// Bonus pedoni passati</span>
+    <span class="kw">for</span> (<span class="kw">auto</span>&amp; <span class="var">p</span> : <span class="fn">pedoni_passati</span>(<span class="var">s</span>, <span class="tp">BIANCO</span>))
+<span class="hl">        <span class="var">score</span> += <span class="num">20</span> + <span class="fn">fila_di</span>(<span class="var">p</span>) <span class="op">*</span> <span class="num">5</span>;  <span class="cm">// più avanzato = più bonus</span></span>
+
+    <span class="kw">return</span> <span class="var">score</span>;
+}</pre>
+      </div>
+    </div>
+
+    
+  </div>
+</section>
+
+<div class="divider"></div>
+<section class="content-section" id="MobilitaEBonus">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">componenti 05–06</div>
+    <h2 class="section-heading">Mobilità &amp; Bonus Speciali</h2>
+
+    <div class="section-body mb-3">
+      Oltre a materiale e posizione, GMVT valuta la <strong>libertà di movimento</strong> 
+      dei pezzi e alcune strutture speciali che gli scacchisti sanno essere vantaggiose.
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin:2rem 0;" class="fade-up">
+      <div class="concept-card">
+        <div class="concept-num">05</div>
+        <div class="concept-label">Mobilità</div>
+        <div class="concept-title">Numero di mosse legali disponibili</div>
+        <div class="concept-text">
+          Un pezzo con più caselle raggiungibili è più attivo e utile. GMVT assegna 
+          un bonus per ogni mossa legale disponibile — con pesi diversi per ogni 
+          tipo di pezzo. Un cavallo con 8 mosse vale ~16 cp in più di uno con 2 mosse.
+          <br><br>
+          <strong>Pesi mobilità:</strong> Cavallo: +2/mossa, Alfiere: +3/mossa, 
+          Torre: +2/mossa, Donna: +1/mossa.
+        </div>
+      </div>
+      <div class="concept-card">
+        <div class="concept-num">06</div>
+        <div class="concept-label">Coppia Alfieri</div>
+        <div class="concept-title">Bonus per possedere entrambi gli alfieri</div>
+        <div class="concept-text">
+          Avere entrambi gli alfieri (campi chiari + scuri) è un vantaggio strutturale 
+          riconosciuto: controllano caselle complementari e sono potentissimi in posizioni 
+          aperte. GMVT assegna un <strong>bonus di +30 cp</strong> se il giocatore possiede 
+          entrambi gli alfieri.
+          <br><br>
+          Bonus aggiuntivo: <strong>Torri su colonne aperte</strong> (+15 cp/torre) 
+          e <strong>Torri su colonne semiaperte</strong> (+8 cp/torre).
+        </div>
+      </div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">mobility_bonus.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="kw">int</span> <span class="fn">valuta_mobilita_e_bonus</span>(<span class="tp">Scacchiera</span>&amp; <span class="var">s</span>)
+{
+    <span class="kw">int</span> <span class="var">score</span> = <span class="num">0</span>;
+
+    <span class="cm">// Mobilità pezzi (mosse disponibili × peso)</span>
+    <span class="kw">const</span> <span class="kw">int</span> <span class="var">W_MOB</span>[] = { <span class="num">0</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">2</span>, <span class="num">1</span>, <span class="num">0</span> };  <span class="cm">// P,N,B,R,Q,K</span>
+    <span class="kw">for</span> (<span class="kw">auto</span>&amp; <span class="var">p</span> : <span class="var">s</span>.<span class="var">pezzi_bianchi</span>)
+<span class="hl">        <span class="var">score</span> += <span class="var">W_MOB</span>[<span class="var">p</span>.<span class="var">tipo</span>] <span class="op">*</span> <span class="fn">mobilita</span>(<span class="var">s</span>, <span class="var">p</span>);</span>
+
+    <span class="cm">// Coppia alfieri</span>
+    <span class="kw">if</span> (<span class="fn">conta_alfieri</span>(<span class="var">s</span>, <span class="tp">BIANCO</span>) == <span class="num">2</span>)
+<span class="hl">        <span class="var">score</span> += <span class="num">30</span>;  <span class="cm">// bonus coppia alfieri</span></span>
+
+    <span class="cm">// Torri su colonne aperte/semiaperte</span>
+    <span class="kw">for</span> (<span class="kw">auto</span>&amp; <span class="var">t</span> : <span class="fn">torri</span>(<span class="var">s</span>, <span class="tp">BIANCO</span>)) {
+        <span class="kw">if</span> (<span class="fn">colonna_aperta</span>(<span class="var">s</span>, <span class="fn">col_di</span>(<span class="var">t</span>)))     <span class="var">score</span> += <span class="num">15</span>;
+        <span class="kw">else</span> <span class="kw">if</span> (<span class="fn">colonna_semiaperta</span>(<span class="var">s</span>, <span class="fn">col_di</span>(<span class="var">t</span>))) <span class="var">score</span> += <span class="num">8</span>;
+    }
+
+    <span class="kw">return</span> <span class="var">score</span>;
+}</pre>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── Page Nav ── -->
+<div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+  <nav class="page-nav">
+    <a href="estensioni.html" class="page-nav-btn prev">
+      <span class="pnb-arrow">←</span>
+      <div><div class="pnb-label">Precedente</div><div class="pnb-title">Estensioni</div></div>
+    </a>
+    <a href="infrastruttura.html" class="page-nav-btn">
+      <div><div class="pnb-label">Successivo</div><div class="pnb-title">Infrastruttura</div></div>
+      <span class="pnb-arrow">→</span>
+    </a>
+  </nav>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-brand">GMVT</div>
+  <div class="site-footer-copy">// chess engine · C++ · 2025–2026</div>
+</footer>
+
+<script>
+const KNIGHT_PST=[
+  -50,-40,-30,-30,-30,-30,-40,-50,
+  -40,-20,  0,  0,  0,  0,-20,-40,
+  -30,  0, 10, 15, 15, 10,  0,-30,
+  -30,  5, 15, 20, 20, 15,  5,-30,
+  -30,  5, 15, 20, 20, 15,  5,-30,
+  -30,  0, 10, 15, 15, 10,  0,-30,
+  -40,-20,  0,  5,  5,  0,-20,-40,
+  -50,-40,-30,-30,-30,-30,-40,-50
+];
+const pstGrid=document.getElementById('knight-pst');
+KNIGHT_PST.forEach(v=>{
+  const cell=document.createElement('div');
+  cell.className='pst-cell';
+  const norm=Math.max(-50,Math.min(20,v));
+  let bg;
+  if(norm>0){const t=norm/20;bg=`rgba(133,183,235,${0.15+t*0.65})`;}
+  else if(norm<0){const t=Math.abs(norm)/50;bg=`rgba(240,150,122,${0.15+t*0.65})`;}
+  else{bg='rgba(0,0,0,0.4)';}
+  cell.style.cssText=`background:${bg};border:1px solid rgba(255,255,255,0.04);`;
+  cell.title=`${v>0?'+':''}${v} cp`;
+  cell.textContent=v!==0?(v>0?'+':'')+v:'·';
+  cell.style.color=v>0?'rgba(133,183,235,0.8)':v<0?'rgba(240,150,122,0.6)':'rgba(255,255,255,0.15)';
+  pstGrid.appendChild(cell);
+});
+
+function taperSet(fase){
+  const pct=fase/24*100;
+  document.getElementById('taper-mg-bar').style.width=pct+'%';
+  document.getElementById('taper-eg-bar').style.width=(100-pct)+'%';
+  document.getElementById('taper-cursor').style.left=pct+'%';
+  const mgPct=Math.round(pct), egPct=100-mgPct;
+  document.getElementById('taper-status-label').textContent=`Fase: ${fase}/24 — ${mgPct}% MG + ${egPct}% EG`;
+}
+
+function initAll(){taperSet(14);}
+
+const obs = new IntersectionObserver(entries => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('visible'), i * 80);
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+window.addEventListener('load', initAll);
+</script>
+<script src="gmvt-intro.js"></script>
+</body>
+</html>

@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GMVT — Estensioni</title>
+  <link rel="icon" type="image/x-icon" href="images/favicon.ico" >
+  <link rel="stylesheet" href="gmvt-shared.css" />
+  <style>
+    :root {
+      --accent-color: #5dcaa5;
+      --accent-rgb:   93, 202, 165;
+      --green: #00ff88;
+      --green-dim: #00cc6a;
+      --green-faint: rgba(0,255,136,0.07);
+      --green-glow: rgba(0,255,136,0.22);
+      --bg: #050505;
+      --border: rgba(0,255,136,0.18);
+      --border-hover: rgba(0,255,136,0.50);
+      --text: #f0fff0;
+      --text-mid: #b8d4b8;
+      --text-dim: #8aac8a;
+      --mono: 'Share Tech Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+    .nav-link { font-family: var(--mono); color: var(--text-mid) !important; font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.4rem 0.9rem !important; transition: color 0.2s; }
+    .nav-link:hover { color: var(--green) !important; }
+    }
+    }
+    }
+
+    /* Extension depth visualizer */
+    .ext-bar-wrap { margin: 1.2rem 0; }
+    .ext-bar-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .ext-bar-label { font-family: var(--mono); font-size: 0.7rem; color: var(--text-dim); width: 160px; flex-shrink: 0; }
+    .ext-bar-track { flex: 1; height: 20px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); position: relative; overflow: hidden; }
+    .ext-bar-fill { height: 100%; transition: width 0.4s ease; display: flex; align-items: center; padding: 0 0.4rem; }
+    .ext-bar-text { font-family: var(--mono); font-size: 0.62rem; color: rgba(0,0,0,0.7); white-space: nowrap; }
+
+    /* Comparison table */
+    .ext-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    .ext-table th { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.14em; color: var(--text-dim); text-transform: uppercase; text-align: left; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--border); }
+    .ext-table td { font-size: 0.85rem; color: var(--text-mid); padding: 0.55rem 0.8rem; border-bottom: 1px solid rgba(0,255,136,0.04); }
+    .ext-table tr:last-child td { border-bottom: none; }
+    .ext-table tr:hover td { background: rgba(93,202,165,0.03); }
+    .ext-badge { display: inline-block; font-family: var(--mono); font-size: 0.7rem; padding: 0.15rem 0.5rem; border: 1px solid; border-radius: 2px; }
+    .ext-badge.yes { border-color: rgba(93,202,165,0.5); color: #5dcaa5; background: rgba(93,202,165,0.07); }
+    .ext-badge.cond { border-color: rgba(175,169,240,0.5); color: #afa9f0; background: rgba(175,169,240,0.07); }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">GMVT</a>
+  <div style="display:flex; align-items:center; gap:2rem;">
+    <a class="nav-back" href="index.html"> Algoritmi</a>
+    <ul class="navbar-nav">
+      <li><a class="nav-link" href="potatura.html">← Potatura</a></li>
+      <li><a class="nav-link" href="valutazione.html">Valutazione →</a></li>
+    </ul>
+  </div>
+</nav>
+
+<section class="page-hero">
+  <div class="page-hero-grid"></div>
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem; position:relative; z-index:2;">
+    <div class="page-tag">📡 Categoria 3 / 5</div>
+    <h1 class="page-title">Estensioni<span>.</span></h1>
+    <p class="page-intro">
+      Non tutte le posizioni meritano la stessa profondità di ricerca. 
+      Le estensioni riconoscono i momenti critici — uno scacco, un'unica risposta possibile, 
+      un pedone a un passo dalla promozione — e approfondiscono la ricerca esattamente dove serve.
+    </p>
+    <div class="page-pills">
+      <span class="pill"><a class="nav-link" href="#CheckExtension">Check Extension</a></span> 
+      <span class="pill"><a class="nav-link" href="#OneReplyExtension">One-Reply Extension</a></span>
+      <span class="pill"><a class="nav-link" href="#PassedPawnExtension">Passed Pawn Extension</a></span>
+      <span class="pill"><a class="nav-link" href="#SingularExtension">Singular Extension</a></span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">concetto base</div>
+    <h2 class="section-heading">Perché estendere la ricerca?</h2>
+
+    <div class="section-body mb-3">
+      La ricerca a profondità fissa può "mancare" sequenze tattiche che iniziano 
+      esattamente al limite della profondità. Le estensioni aggiungono 
+      <strong>+1 ply</strong> (o frazioni) in posizioni dove la ricerca superficiale 
+      sarebbe insufficiente — senza aumentare la profondità globale in modo indiscriminato.
+      <br><br>
+      In GMVT le estensioni vengono accumulate in una variabile 
+      <code style="font-family:var(--mono);color:var(--accent-color)">ext</code> e 
+      applicate come <code style="font-family:var(--mono);color:var(--accent-color)">prof - 1 + ext</code> 
+      nella chiamata ricorsiva.
+    </div>
+
+    <!-- Extension depth comparison -->
+    <div class="ext-bar-wrap fade-up">
+      <div class="ext-bar-row">
+        <div class="ext-bar-label">Ricerca normale (d=8)</div>
+        <div class="ext-bar-track">
+          <div class="ext-bar-fill" style="width:68%;background:rgba(93,202,165,0.3);">
+            <span class="ext-bar-text">8 ply</span>
+          </div>
+        </div>
+      </div>
+      <div class="ext-bar-row">
+        <div class="ext-bar-label">+ Check Extension</div>
+        <div class="ext-bar-track">
+          <div class="ext-bar-fill" style="width:76%;background:rgba(93,202,165,0.45);">
+            <span class="ext-bar-text">9 ply (+1)</span>
+          </div>
+        </div>
+      </div>
+      <div class="ext-bar-row">
+        <div class="ext-bar-label">+ One-Reply</div>
+        <div class="ext-bar-track">
+          <div class="ext-bar-fill" style="width:84%;background:rgba(93,202,165,0.6);">
+            <span class="ext-bar-text">10 ply (+2)</span>
+          </div>
+        </div>
+      </div>
+      <div class="ext-bar-row">
+        <div class="ext-bar-label">+ Singular Ext.</div>
+        <div class="ext-bar-track">
+          <div class="ext-bar-fill" style="width:92%;background:rgba(93,202,165,0.8);">
+            <span class="ext-bar-text">11 ply (+3)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout fade-up">
+      <div class="callout-icon">⚖️</div>
+      <div class="callout-content">
+        <div class="callout-title">Limite di estensione — evitare l'esplosione</div>
+        <div class="callout-text">
+          Le estensioni non sono illimitate: GMVT applica un <strong>cap</strong> 
+          (<code style="font-family:var(--mono);color:var(--accent-color)">ext ≤ 2</code>) per 
+          evitare che sequenze di scacchi artificiali portino a profondità infinite. 
+          L'estensione totale non può superare la profondità iniziale.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="CheckExtension">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">estensione 01</div>
+    <h2 class="section-heading">Check Extension</h2>
+
+    <div class="section-body mb-3">
+      Quando una mossa mette il re avversario in <strong>scacco</strong>, la posizione 
+      risultante è di per sé critica: il giocatore in scacco ha opzioni limitate e 
+      spesso obbligate. Tagliare la ricerca in questo momento significherebbe perdere 
+      sequenze tattiche fondamentali.
+      <br><br>
+      GMVT estende di <strong>+1 ply</strong> ogni volta che la mossa analizzata 
+      causa uno scacco. Questo è uno dei contributi più importanti alla forza tattica 
+      del motore.
+    </div>
+
+    <div class="complexity-row fade-up">
+      <div class="complexity-badge"><div class="cb-label">Estensione</div><div class="cb-value">+1 ply</div></div>
+      <div class="complexity-badge"><div class="cb-label">Condizione</div><div class="cb-value">in_scacco()</div></div>
+      <div class="complexity-badge"><div class="cb-label">Cap globale</div><div class="cb-value">+2 ply</div></div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">check_extension.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="kw">int</span> <span class="var">ext</span> = <span class="num">0</span>;
+
+<span class="cm">// Check Extension: mossa corrente mette in scacco?</span>
+<span class="fn">esegui_mossa</span>(<span class="var">s</span>, <span class="var">mossa</span>);
+<span class="kw">if</span> (<span class="fn">in_scacco</span>(<span class="var">s</span>))
+{
+<span class="hl">    <span class="var">ext</span> = <span class="num">1</span>;   <span class="cm">// +1 ply: la posizione di scacco richiede analisi più profonda</span></span>
+}
+
+<span class="cm">// Applica l'estensione nella chiamata ricorsiva</span>
+<span class="kw">int</span> <span class="var">val</span> = <span class="op">-</span><span class="fn">minimax</span>(<span class="var">s</span>,
+    <span class="fn">min</span>(<span class="var">prof</span><span class="op">-</span><span class="num">1</span><span class="op">+</span><span class="var">ext</span>, <span class="var">MAX_PLY</span>),  <span class="cm">// non superare la profondità massima</span>
+    <span class="op">-</span><span class="var">beta</span>, <span class="op">-</span><span class="var">alfa</span>);</pre>
+      </div>
+    </div>
+
+    
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="OneReplyExtension">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">estensione 02</div>
+    <h2 class="section-heading">One-Reply Extension</h2>
+
+    <div class="section-body mb-3">
+      Se il giocatore in scacco ha una <strong>sola risposta legale</strong>, la posizione 
+      è di fatto "forzata": qualunque analisi parziale sarebbe fuorviante. 
+      L'estensione <strong>One-Reply</strong> aggiunge +1 ply quando il generatore di mosse 
+      produce un singolo candidato legale.
+      <br><br>
+      Questo è particolarmente utile nei matti a lungo termine dove una serie di 
+      scacchi con risposta unica porta inevitabilmente alla conclusione.
+    </div>
+
+    <div class="complexity-row fade-up">
+      <div class="complexity-badge"><div class="cb-label">Condizione</div><div class="cb-value">1 mossa legale</div></div>
+      <div class="complexity-badge"><div class="cb-label">Estensione</div><div class="cb-value">+1 ply</div></div>
+      <div class="complexity-badge"><div class="cb-label">Combinabile</div><div class="cb-value">Con Check Ext.</div></div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">one_reply.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="kw">auto</span> <span class="var">mosse</span> = <span class="fn">genera_mosse_legali</span>(<span class="var">s</span>);
+
+<span class="cm">// One-Reply Extension: se c'è una sola risposta legale</span>
+<span class="kw">if</span> (<span class="var">mosse</span>.<span class="fn">size</span>() == <span class="num">1</span>)
+{
+<span class="hl">    <span class="var">ext</span> = <span class="fn">min</span>(<span class="var">ext</span> <span class="op">+</span> <span class="num">1</span>, <span class="num">2</span>);  <span class="cm">// +1 ply, con cap globale a 2</span></span>
+}
+
+<span class="kw">int</span> <span class="var">val</span> = <span class="op">-</span><span class="fn">minimax</span>(<span class="var">s</span>, <span class="var">prof</span><span class="op">-</span><span class="num">1</span><span class="op">+</span><span class="var">ext</span>, <span class="op">-</span><span class="var">beta</span>, <span class="op">-</span><span class="var">alfa</span>);</pre>
+      </div>
+    </div>
+
+    <div class="diagram-wrap fade-up">
+      <svg viewBox="0 0 740 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:740px;display:block;margin:0 auto">
+        <defs>
+          <marker id="arr-ext" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="rgba(93,202,165,0.7)"/>
+          </marker>
+          <marker id="arr-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="rgba(240,150,122,0.7)"/>
+          </marker>
+        </defs>
+        <!-- Node: scacco -->
+        <rect x="290" y="10" width="160" height="38" rx="2" fill="none" stroke="#5dcaa5" stroke-width="1.3"/>
+        <text x="370" y="34" text-anchor="middle" font-family="Share Tech Mono" font-size="11" fill="#5dcaa5">Scacco al re!</text>
+        <!-- Many-reply branch (no ext) -->
+        <line x1="330" y1="48" x2="130" y2="105" stroke="rgba(120,120,120,0.4)" stroke-width="1" marker-end="url(#arr-red)"/>
+        <rect x="40" y="105" width="180" height="38" rx="2" fill="rgba(120,120,120,0.05)" stroke="rgba(120,120,120,0.3)" stroke-width="1"/>
+        <text x="130" y="121" text-anchor="middle" font-family="Share Tech Mono" font-size="10" fill="#888">Più risposte possibili</text>
+        <text x="130" y="136" text-anchor="middle" font-family="Share Tech Mono" font-size="9" fill="rgba(120,120,120,0.6)">nessuna estensione</text>
+        <!-- One-reply branch -->
+        <line x1="410" y1="48" x2="600" y2="105" stroke="rgba(93,202,165,0.6)" stroke-width="1.5" marker-end="url(#arr-ext)"/>
+        <rect x="510" y="105" width="190" height="38" rx="2" fill="rgba(93,202,165,0.07)" stroke="rgba(93,202,165,0.5)" stroke-width="1.3"/>
+        <text x="605" y="121" text-anchor="middle" font-family="Share Tech Mono" font-size="10" fill="#5dcaa5">1 sola risposta</text>
+        <text x="605" y="136" text-anchor="middle" font-family="Share Tech Mono" font-size="9" fill="rgba(93,202,165,0.7)">+1 ply estensione!</text>
+        <text x="370" y="168" text-anchor="middle" font-family="Share Tech Mono" font-size="10" fill="rgba(93,202,165,0.45)">— se la risposta è unica, la sequenza è forzata → conviene approfondire →</text>
+      </svg>
+      <div class="diagram-caption">// One-Reply Extension: la mossa forzata merita più analisi di una posizione con molte alternative</div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="PassedPawnExtension">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">estensione 03</div>
+    <h2 class="section-heading">Passed Pawn Extension</h2>
+
+    <div class="section-body mb-3">
+      Un <strong>pedone passato</strong> — non bloccato da pedoni avversari sulla sua colonna 
+      né sulle colonne adiacenti — è una minaccia crescente nei finali: se raggiunge 
+      la traversa finale diventa una regina. GMVT estende la ricerca quando un pedone 
+      passato avanza nelle ultime due traverse (6ª o 7ª fila per il bianco).
+      <br><br>
+      Questa estensione è fondamentale per valutare correttamente le corse al pedone 
+      passato nei finali, dove ogni mossa conta.
+    </div>
+
+    <div class="complexity-row fade-up">
+      <div class="complexity-badge"><div class="cb-label">Condizione</div><div class="cb-value">Fila 6 o 7</div></div>
+      <div class="complexity-badge"><div class="cb-label">Estensione</div><div class="cb-value">+1 ply</div></div>
+      <div class="complexity-badge"><div class="cb-label">Fase</div><div class="cb-value">Finale</div></div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">passed_pawn.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="cm">// Passed Pawn Extension: pedone passato nelle ultime traverse</span>
+<span class="kw">bool</span> <span class="var">e_pedone</span> = (<span class="var">pezzo_mosso</span> == <span class="tp">PEDONE</span>);
+<span class="kw">int</span>  <span class="var">fila_dest</span> = <span class="fn">fila_di</span>(<span class="var">mossa</span>.<span class="var">dest</span>);
+<span class="kw">bool</span> <span class="var">avanzato</span>  = (<span class="var">colore</span> == <span class="tp">BIANCO</span>) ? (<span class="var">fila_dest</span> &gt;= <span class="num">6</span>) 
+                                          : (<span class="var">fila_dest</span> &lt;= <span class="num">3</span>);
+
+<span class="kw">if</span> (<span class="var">e_pedone</span> && <span class="var">avanzato</span> && <span class="fn">e_passato</span>(<span class="var">s</span>, <span class="var">mossa</span>.<span class="var">dest</span>))
+{
+<span class="hl">    <span class="var">ext</span> = <span class="fn">min</span>(<span class="var">ext</span> <span class="op">+</span> <span class="num">1</span>, <span class="num">2</span>);  <span class="cm">// pedone passato avanzato → analisi più profonda</span></span>
+}</pre>
+      </div>
+    </div>
+
+    <!-- Demo Passed Pawn -->
+    
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="SingularExtension">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">estensione 04</div>
+    <h2 class="section-heading">Singular Extension (SE)</h2>
+
+    <div class="section-body mb-3">
+      La <strong>Singular Extension</strong> è la più sofisticata tra le estensioni: 
+      si applica quando una mossa è <em>singolarmente</em> migliore di tutte le alternative. 
+      GMVT verifica questo cercando con una finestra ridotta (<strong>singolar probe</strong>) 
+      escludendo la mossa candidata: se nessuna altra mossa supera 
+      <code style="font-family:var(--mono);color:var(--accent-color)">alpha - margine</code>, 
+      la mossa è davvero speciale e merita +1 ply extra.
+    </div>
+
+    <div class="complexity-row fade-up">
+      <div class="complexity-badge"><div class="cb-label">Margine probe</div><div class="cb-value">50 cp</div></div>
+      <div class="complexity-badge"><div class="cb-label">Depth probe</div><div class="cb-value">(d-1)/2</div></div>
+      <div class="complexity-badge"><div class="cb-label">Estensione</div><div class="cb-value">+1 ply</div></div>
+      <div class="complexity-badge"><div class="cb-label">Richiede</div><div class="cb-value">TT hit</div></div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <span class="code-filename">singular_ext.<span>cpp</span></span>
+        <span class="code-lang">C++</span>
+      </div>
+      <div class="code-body">
+<pre><span class="cm">// Singular Extension: la mossa TT è davvero la migliore?</span>
+<span class="kw">if</span> (<span class="var">tt_mossa</span> == <span class="var">mossa_corrente</span>
+    && <span class="var">tt_depth</span> &gt;= <span class="var">prof</span> <span class="op">-</span> <span class="num">3</span>
+    && <span class="var">prof</span> &gt;= <span class="num">8</span>)
+{
+    <span class="cm">// Cerca senza la mossa TT con finestra ridotta e profondità dimezzata</span>
+    <span class="kw">int</span> <span class="var">margine</span>   = <span class="var">tt_val</span> <span class="op">-</span> <span class="num">50</span>;
+    <span class="kw">int</span> <span class="var">probe_val</span> = <span class="fn">minimax_escludi</span>(<span class="var">s</span>, (<span class="var">prof</span><span class="op">-</span><span class="num">1</span>)<span class="op">/</span><span class="num">2</span>,
+                        <span class="var">margine</span><span class="op">-</span><span class="num">1</span>, <span class="var">margine</span>, <span class="var">mossa_corrente</span>);
+
+<span class="hl">    <span class="kw">if</span> (<span class="var">probe_val</span> &lt; <span class="var">margine</span>)   <span class="cm">// nessuna altra mossa è competitiva</span></span>
+<span class="hl">        <span class="var">ext</span> = <span class="num">1</span>;              <span class="cm">// questa mossa è singolare → +1 ply</span></span>
+}</pre>
+      </div>
+    </div>
+
+    <div class="callout fade-up">
+      <div class="callout-icon">🔬</div>
+      <div class="callout-content">
+        <div class="callout-title">Come funziona il "singular probe"</div>
+        <div class="callout-text">
+          GMVT esegue una ricerca <strong>escludendo</strong> la mossa migliore dalla TT 
+          (tabella trasposizioni). Se anche senza quella mossa il valore scende sotto 
+          <code style="font-family:var(--mono);color:var(--accent-color)">tt_val - 50</code>, 
+          significa che la mossa TT è davvero l'unica buona — e merita un'analisi più profonda.
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabella riepilogo tutte le estensioni -->
+    <table class="ext-table fade-up">
+      <tr>
+        <th>Estensione</th>
+        <th>Condizione</th>
+        <th>Ply extra</th>
+        <th>Impatto</th>
+      </tr>
+      <tr>
+        <td><strong>Check Extension</strong></td>
+        <td>La mossa dà scacco</td>
+        <td><span class="ext-badge yes">+1</span></td>
+        <td>Alto — sequenze tattiche</td>
+      </tr>
+      <tr>
+        <td><strong>One-Reply</strong></td>
+        <td>1 sola mossa legale</td>
+        <td><span class="ext-badge yes">+1</span></td>
+        <td>Medio — matti forzati</td>
+      </tr>
+      <tr>
+        <td><strong>Passed Pawn</strong></td>
+        <td>Pedone passato avanzato (6ª/7ª)</td>
+        <td><span class="ext-badge yes">+1</span></td>
+        <td>Medio — finali pedoni</td>
+      </tr>
+      <tr>
+        <td><strong>Singular Extension</strong></td>
+        <td>Mossa TT unica competitiva</td>
+        <td><span class="ext-badge yes">+1</span></td>
+        <td>Alto — qualità PV</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="color:var(--text-dim);font-style:italic;">Cap combinato</td>
+        <td><span class="ext-badge cond">≤ +2</span></td>
+        <td>Evita esplosione profondità</td>
+      </tr>
+    </table>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+  <nav class="page-nav">
+    <a href="potatura.html" class="page-nav-btn prev">
+      <span class="pnb-arrow">←</span>
+      <div><div class="pnb-label">Precedente</div><div class="pnb-title">Potatura</div></div>
+    </a>
+    <a href="valutazione.html" class="page-nav-btn">
+      <div><div class="pnb-label">Successivo</div><div class="pnb-title">Valutazione</div></div>
+      <span class="pnb-arrow">→</span>
+    </a>
+  </nav>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-brand">GMVT</div>
+  <div class="site-footer-copy">// chess engine · C++ · 2025–2026</div>
+</footer>
+
+<script>
+function initAll() {}
+
+const obs = new IntersectionObserver(entries => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('visible'), i * 80);
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+window.addEventListener('load', initAll);
+</script>
+<script src="gmvt-intro.js"></script>
+</body>
+</html> 

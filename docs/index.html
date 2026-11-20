@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="google-site-verification" content="bL1yKFrL-HtSslve39Jt9pYb8MchDqgh9qA7WtVKGrg" />
+  <title>GMVT — Chess Engine</title>
+  <link rel="icon" type="image/x-icon" href="images/favicon.ico" >
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Restore navbar brand immediately if intro already played this session -->
+  <script>if(sessionStorage.getItem('gmvt_intro_done')==='1'){document.addEventListener('DOMContentLoaded',function(){var b=document.querySelector('.navbar-brand');if(b)b.style.opacity='1';});}</script>
+  <style>
+    :root {
+      --green: #00ff88;
+      --green-dim: #00cc6a;
+      --green-faint: rgba(0,255,136,0.07);
+      --green-glow: rgba(0,255,136,0.22);
+      --bg: #050505;
+      --border: rgba(0,255,136,0.18);
+      --border-hover: rgba(0,255,136,0.50);
+      --text: #f0fff0;
+      --text-mid: #b8d4b8;
+      --text-dim: #8aac8a;
+      --mono: 'Share Tech Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: var(--mono); overflow-x: hidden; }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
+      pointer-events: none; z-index: 9999;
+    }
+
+    #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+    .navbar, section, footer, .section-divider { position: relative; z-index: 2; }
+
+    /* ── NAVBAR ── */
+    .navbar { background: rgba(5,5,5,0.92); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); padding: 1rem 2rem; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; }
+    .navbar-brand { font-family: var(--sans); font-weight: 800; font-size: 1.5rem; color: var(--green) !important; letter-spacing: 0.1em; text-shadow: 0 0 18px var(--green-glow); }
+    .nav-link { font-family: var(--mono); color: var(--text-mid) !important; font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.4rem 0.9rem !important; transition: color 0.2s; }
+    .nav-link:hover { color: var(--green) !important; }
+    .navbar-toggler { border-color: var(--border); }
+    .navbar-toggler-icon { filter: invert(1) sepia(1) hue-rotate(90deg); }
+
+    /* ── HERO ── */
+    #hero { min-height: 100vh; display: flex; align-items: center; padding: 7rem 0 5rem; background: transparent; position: relative; overflow: hidden; }
+    .hero-grid { position: absolute; inset: 0; z-index: 1; pointer-events: none; background-image: linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px); background-size: 60px 60px; animation: gridshift 22s linear infinite; opacity: 0.35; }
+    @keyframes gridshift { from { background-position: 0 0; } to { background-position: 60px 60px; } }
+    .hero-content { position: relative; z-index: 3; }
+    .hero-tag { display: inline-block; font-size: 0.75rem; letter-spacing: 0.22em; color: var(--green); border: 1px solid var(--border); padding: 0.3rem 0.85rem; margin-bottom: 1.5rem; background: var(--green-faint); }
+    .hero-title { font-family: var(--sans); font-weight: 800; font-size: clamp(4.5rem,13vw,10rem); line-height: 0.92; color: var(--text); letter-spacing: -0.03em; margin-bottom: 0.6rem; text-shadow: 0 0 80px rgba(0,255,136,0.1); }
+    .hero-title .accent { color: var(--green); }
+    .hero-subtitle { font-size: 0.96rem; color: var(--text-mid); letter-spacing: 0.04em; margin-bottom: 2.5rem; max-width: 480px; line-height: 1.8; }
+    .badge-lang { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--green); border: 1px solid var(--green-dim); padding: 0.45rem 1rem; background: var(--green-faint); margin-right: 0.65rem; margin-bottom: 0.65rem; }
+    .hero-stats { display: flex; gap: 2.5rem; margin-top: 3rem; flex-wrap: wrap; }
+    .stat-num { font-family: var(--sans); font-weight: 700; font-size: 1.9rem; color: var(--green); display: block; text-shadow: 0 0 14px var(--green-glow); }
+    .stat-label { font-size: 0.68rem; color: var(--text-mid); letter-spacing: 0.16em; text-transform: uppercase; }
+    .cursor { display: inline-block; width: 3px; height: 0.85em; background: var(--green); vertical-align: middle; margin-left: 4px; animation: blink 1s step-end infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── SECTIONS ── */
+    section { padding: 6rem 0; }
+    .section-divider { width: 100%; height: 1px; background: linear-gradient(90deg,transparent,var(--border),transparent); }
+    .section-label { font-size: 0.72rem; letter-spacing: 0.26em; color: var(--green); text-transform: uppercase; margin-bottom: 0.5rem; opacity: 0.85; }
+    .section-title { font-family: var(--sans); font-weight: 800; font-size: clamp(2rem,4vw,3rem); color: var(--text); margin-bottom: 0.5rem; line-height: 1.1; }
+    .section-desc { color: var(--text-mid); font-size: 0.92rem; max-width: 520px; line-height: 1.8; }
+
+    #algoritmi { background: rgba(5,5,5,0.82); backdrop-filter: blur(3px); }
+    #team { background: rgba(5,5,5,0.88); backdrop-filter: blur(4px); }
+
+    /* ── ALGO CARDS ── */
+    .cat-card {
+      border: 1px solid var(--border);
+      background: rgba(12,12,12,0.92);
+      backdrop-filter: blur(8px);
+      padding: 2rem;
+      height: 100%;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+      overflow: hidden;
+    }
+    .cat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg,transparent,var(--green),transparent); opacity: 0; transition: opacity 0.3s; }
+    .cat-card:hover { border-color: var(--border-hover); transform: translateY(-4px); box-shadow: 0 16px 48px rgba(0,255,136,0.08); }
+    .cat-card:hover::before { opacity: 1; }
+    .cat-icon { font-size: 1.6rem; margin-bottom: 1rem; display: block; }
+    .cat-name { font-family: var(--sans); font-weight: 700; font-size: 1.1rem; color: var(--green); margin-bottom: 0.5rem; }
+    .cat-desc { font-size: 1.3rem; color: var(--text-mid); margin-bottom: 1.3rem; line-height: 1.75; }
+    .algo-list { list-style: none; padding: 0; flex: 1; }
+    .algo-list li {
+      font-size: 1rem;
+      color: var(--text);
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(0,255,136,0.07);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      line-height: 1.4;
+      transition: color 0.2s;
+    }
+    .algo-list li:hover { color: var(--green); }
+    .algo-list li:last-child { border-bottom: none; }
+    .algo-list li::before { content: '▸'; color: var(--green); font-size: 0.62rem; flex-shrink: 0; opacity: 0.7; }
+
+    /* ── DETAIL LINK BUTTON ── */
+    .algo-detail-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1.4rem;
+      font-size: 0.75rem;
+      font-family: var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--green);
+      border: 1px solid var(--border);
+      background: var(--green-faint);
+      padding: 0.5rem 1rem;
+      text-decoration: none;
+      transition: background 0.25s, border-color 0.25s, color 0.25s, box-shadow 0.25s;
+      width: 100%;
+      justify-content: space-between;
+    }
+    .algo-detail-link:hover {
+      background: rgba(0,255,136,0.13);
+      border-color: var(--green-dim);
+      color: var(--text);
+      box-shadow: 0 0 16px rgba(0,255,136,0.10);
+    }
+    .algo-detail-link .arrow { transition: transform 0.25s; }
+    .algo-detail-link:hover .arrow { transform: translateX(5px); }
+
+    /* Per-category accent colors */
+    .cat-ricerca .cat-name, .cat-ricerca .algo-list li::before { color: #afa9f0; }
+    .cat-ricerca::before { background: linear-gradient(90deg,transparent,#afa9f0,transparent); }
+    .cat-ricerca .algo-detail-link { color: #afa9f0; border-color: rgba(175,169,240,0.22); background: rgba(175,169,240,0.06); }
+    .cat-ricerca .algo-detail-link:hover { background: rgba(175,169,240,0.14); border-color: rgba(175,169,240,0.5); color: var(--text); }
+
+    .cat-potatura .cat-name, .cat-potatura .algo-list li::before { color: #f0967a; }
+    .cat-potatura::before { background: linear-gradient(90deg,transparent,#f0967a,transparent); }
+    .cat-potatura .algo-detail-link { color: #f0967a; border-color: rgba(240,150,122,0.22); background: rgba(240,150,122,0.06); }
+    .cat-potatura .algo-detail-link:hover { background: rgba(240,150,122,0.14); border-color: rgba(240,150,122,0.5); color: var(--text); }
+
+    .cat-estensioni .cat-name, .cat-estensioni .algo-list li::before { color: #5dcaa5; }
+    .cat-estensioni::before { background: linear-gradient(90deg,transparent,#5dcaa5,transparent); }
+    .cat-estensioni .algo-detail-link { color: #5dcaa5; border-color: rgba(93,202,165,0.22); background: rgba(93,202,165,0.06); }
+    .cat-estensioni .algo-detail-link:hover { background: rgba(93,202,165,0.14); border-color: rgba(93,202,165,0.5); color: var(--text); }
+
+    .cat-valutazione .cat-name, .cat-valutazione .algo-list li::before { color: #85b7eb; }
+    .cat-valutazione::before { background: linear-gradient(90deg,transparent,#85b7eb,transparent); }
+    .cat-valutazione .algo-detail-link { color: #85b7eb; border-color: rgba(133,183,235,0.22); background: rgba(133,183,235,0.06); }
+    .cat-valutazione .algo-detail-link:hover { background: rgba(133,183,235,0.14); border-color: rgba(133,183,235,0.5); color: var(--text); }
+
+    .cat-infrastruttura .cat-name, .cat-infrastruttura .algo-list li::before { color: #c8c5bc; }
+    .cat-infrastruttura::before { background: linear-gradient(90deg,transparent,#c8c5bc,transparent); }
+    .cat-infrastruttura .algo-detail-link { color: #c8c5bc; border-color: rgba(200,197,188,0.22); background: rgba(200,197,188,0.06); }
+    .cat-infrastruttura .algo-detail-link:hover { background: rgba(200,197,188,0.14); border-color: rgba(200,197,188,0.5); color: var(--text); }
+
+    /* ── TEAM ── */
+    .team-card { border: 1px solid var(--border); background: rgba(15,15,15,0.92); backdrop-filter: blur(10px); padding: 2rem 1.75rem; text-align: center; position: relative; transition: border-color 0.3s,box-shadow 0.3s,transform 0.3s; overflow: hidden; }
+    .team-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg,transparent,var(--green),transparent); opacity: 0; transition: opacity 0.3s; }
+    .team-card:hover { border-color: var(--border-hover); transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,255,136,0.07); }
+    .team-card:hover::after { opacity: 1; }
+    .team-avatar { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.2rem; font-size: 1.4rem; background: var(--green-faint); transition: border-color 0.3s; }
+    .team-card:hover .team-avatar { border-color: var(--green-dim); }
+    .team-name { font-family: var(--sans); font-weight: 700; font-size: 1.08rem; color: var(--text); margin-bottom: 0.25rem; }
+    .team-class { font-size: 0.7rem; color: var(--green); letter-spacing: 0.16em; margin-bottom: 1rem; opacity: 0.8; }
+    .team-role { font-size: 0.78rem; color: var(--text-mid); line-height: 1.7; }
+    .team-role strong { color: var(--text); font-family: inherit; }
+
+    /* ── FOOTER ── */
+    footer { background: rgba(3,3,3,0.96); border-top: 1px solid var(--border); padding: 3rem 0 2rem; }
+    .footer-logo { font-family: var(--sans); font-weight: 800; font-size: 1.9rem; color: var(--green); text-shadow: 0 0 22px var(--green-glow); letter-spacing: 0.08em; }
+    .footer-tagline { font-size: 0.73rem; color: var(--text-mid); margin-top: 0.3rem; letter-spacing: 0.1em; }
+    .footer-credits-title { font-size: 0.68rem; color: var(--green); letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: 1rem; opacity: 0.72; }
+    .credit-item { display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 1rem; }
+    .credit-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; margin-top: 5px; flex-shrink: 0; box-shadow: 0 0 6px var(--green); }
+    .credit-name { font-family: var(--sans); font-weight: 600; font-size: 0.9rem; color: var(--text); line-height: 1.3; }
+    .credit-class { font-size: 0.66rem; color: var(--green); opacity: 0.7; letter-spacing: 0.1em; }
+    .credit-role { font-size: 0.68rem; color: var(--text-mid); margin-top: 0.1rem; }
+    .footer-bottom { border-top: 1px solid var(--border); margin-top: 2.5rem; padding-top: 1.5rem; font-size: 0.66rem; color: var(--text-dim); letter-spacing: 0.1em; }
+    .footer-link { color: var(--text-mid); text-decoration: none; display: block; transition: color 0.2s; line-height: 2.3; font-size: 0.78rem; }
+    .footer-link:hover { color: var(--green); }
+
+    /* ── NOTE BOX ── */
+    .nota-box {
+      border: 1px solid var(--border);
+      background: var(--green-faint);
+      padding: 1rem 1.5rem;
+      font-size: 0.78rem;
+      color: var(--text-mid);
+      letter-spacing: 0.04em;
+      line-height: 1.7;
+    }
+
+    /* ── FADE UP ── */
+    .fade-up { opacity: 0; transform: translateY(28px); transition: opacity 0.65s ease,transform 0.65s ease; }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 768px) { .hero-stats { gap: 1.5rem; } }
+  </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<nav class="navbar navbar-expand-lg">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand" href="#hero" style="opacity:0">GMVT</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navmenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="navmenu">
+      <ul class="navbar-nav gap-1">
+        <li class="nav-item"><a class="nav-link" href="#hero">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="#algoritmi">Algoritmi</a></li>
+        <li class="nav-item"><a class="nav-link" href="#team">Team</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<section id="hero">
+  <div class="hero-grid"></div>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-9 hero-content">
+        <div class="hero-tag">// motore scacchistico · C++</div>
+        <h1 class="hero-title"><span class="accent">G</span>MVT<span class="cursor"></span></h1>
+        <p class="hero-subtitle">Un motore scacchistico ad alte prestazioni scritto in C/C++, con algoritmi avanzati di ricerca, potatura e valutazione statica della posizione.</p>
+        <div>
+          <span class="badge-lang">⚙ C++</span>
+          <span class="badge-lang">♟ Chess Engine</span>
+          <span class="badge-lang">🧠 Alpha-Beta + PVS</span>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-item"><span class="stat-num">16</span><span class="stat-label">Profondità max</span></div>
+          <div class="stat-item"><span class="stat-num">5</span><span class="stat-label">Categorie algoritmiche</span></div>
+          <div class="stat-item"><span class="stat-num">200+</span><span class="stat-label">Linee opening book</span></div>
+          <div class="stat-item"><span class="stat-num">3</span><span class="stat-label">Sviluppatori</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<section id="algoritmi">
+  <div class="container">
+    <div class="row mb-5">
+      <div class="col-12 fade-up">
+        <div class="section-label">// core algorithms</div>
+        <h2 class="section-title">Architettura del motore</h2>
+        <p class="section-desc">GMVT combina ricerca ad albero, potatura aggressiva e valutazione posizionale dettagliata per giocare in modo efficiente e competitivo.</p>
+      </div>
+    </div>
+    <div class="row g-4">
+
+      <!-- RICERCA -->
+      <div class="col-md-6 col-xl-4 fade-up">
+        <div class="cat-card cat-ricerca h-100">
+          <span class="cat-icon">🔍</span>
+          <div class="cat-name">Ricerca</div>
+          <div class="cat-desc">Esplorazione dell'albero di gioco con profondità incrementale e finestre di aspirazione.</div>
+          <ul class="algo-list">
+            <li>Iterative Deepening (prof. 1→16)</li>
+            <li>PVS — Principal Variation Search</li>
+            <li>Quiescence Search (solo catture)</li>
+            <li>Aspiration Windows</li>
+          </ul>
+          <a href="ricerca.html" class="algo-detail-link" style="position:relative;">
+            <span>Approfondisci la ricerca</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- POTATURA -->
+      <div class="col-md-6 col-xl-4 fade-up">
+        <div class="cat-card cat-potatura h-100">
+          <span class="cat-icon">✂️</span>
+          <div class="cat-name">Potatura (Pruning)</div>
+          <div class="cat-desc">Eliminazione dei rami non promettenti per ridurre il fattore di ramificazione.</div>
+          <ul class="algo-list">
+            <li>Alfa-Beta Pruning</li>
+            <li>Null Move Pruning (NMP)</li>
+            <li>Reverse Futility Pruning (RFP)</li>
+            <li>Late Move Reduction (LMR)</li>
+            <li>ProbCut</li>
+            <li>Mate Distance Pruning</li>
+          </ul>
+          <a href="potatura.html" class="algo-detail-link">
+            <span>Approfondisci la potatura</span>
+            <span class="arrow">→</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- ESTENSIONI -->
+      <div class="col-md-6 col-xl-4 fade-up">
+        <div class="cat-card cat-estensioni h-100">
+          <span class="cat-icon">📡</span>
+          <div class="cat-name">Estensioni</div>
+          <div class="cat-desc">Approfondimento selettivo della ricerca nelle posizioni tatticamente critiche.</div>
+          <ul class="algo-list">
+            <li>Check Extension — scacco</li>
+            <li>One-reply Extension — unica risposta</li>
+            <li>Passed Pawn Extension — pedone passato</li>
+            <li>Singular Extension (SE)</li>
+          </ul>
+          <a href="estensioni.html" class="algo-detail-link">
+            <span>Approfondisci le estensioni</span>
+            <span class="arrow">→</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- VALUTAZIONE -->
+      <div class="col-md-6 col-xl-6 fade-up">
+        <div class="cat-card cat-valutazione h-100">
+          <span class="cat-icon">⚖️</span>
+          <div class="cat-name">Valutazione Statica</div>
+          <div class="cat-desc">Stima del valore di una posizione considerando fase di gioco, struttura e attività dei pezzi.</div>
+          <ul class="algo-list">
+            <li>Piece-Square Tables (middlegame + endgame)</li>
+            <li>Tapered eval — interpolazione per fase di gioco</li>
+            <li>Struttura pedonale</li>
+            <li>Sicurezza del re</li>
+            <li>Mobilità dei pezzi</li>
+            <li>Coppia alfieri / torri su colonne aperte</li>
+          </ul>
+          <a href="valutazione.html" class="algo-detail-link">
+            <span>Approfondisci la valutazione</span>
+            <span class="arrow">→</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- INFRASTRUTTURA -->
+      <div class="col-md-12 col-xl-6 fade-up">
+        <div class="cat-card cat-infrastruttura h-100">
+          <span class="cat-icon">🏗️</span>
+          <div class="cat-name">Infrastruttura</div>
+          <div class="cat-desc">Componenti di basso livello che accelerano la ricerca e gestiscono casi speciali.</div>
+          <ul class="algo-list">
+            <li>Hash Zobrist — identificazione univoca posizioni</li>
+            <li>Tabella Trasposizioni (TT) — cache nodi analizzati</li>
+            <li>IID — Internal Iterative Deepening</li>
+            <li>Regola 50 mosse / rilevamento ripetizioni</li>
+            <li>Contromossa (countermove heuristic)</li>
+            <li>Opening Book — ~60 linee di apertura</li>
+          </ul>
+          <a href="infrastruttura.html" class="algo-detail-link">
+            <span>Approfondisci l'infrastruttura</span>
+            <span class="arrow">→</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+    <div class="row mt-4">
+      <div class="col-12 fade-up">
+        <div class="nota-box">
+          <span style="color:var(--green);">// nota —</span> Contromossa e bitboard accelerano ulteriormente la ricerca riducendo il branching factor effettivo. Clicca su ogni categoria per una spiegazione dettagliata con esempi e pseudocodice.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<section id="team">
+  <div class="container">
+    <div class="row mb-5">
+      <div class="col-12 fade-up">
+        <div class="section-label">// sviluppatori</div>
+        <h2 class="section-title">Il team</h2>
+        <p class="section-desc">Tre studenti, un motore. Ogni componente ha portato competenze diverse per costruire GMVT.</p>
+      </div>
+    </div>
+    <div class="row g-4 justify-content-center">
+      <div class="col-md-4 fade-up">
+        <div class="team-card">
+          <div class="team-avatar">♜</div>
+          <div class="team-name">Soel Xhemali</div>
+          <div class="team-class">CLASSE 3A</div>
+          <div class="team-role"><strong>Logica del bot &amp; Sito</strong><br>Sviluppo del nucleo algoritmico: ricerca, potatura e funzione di valutazione e supporto allo sviluppo del sito.</div>
+        </div>
+      </div>
+      <div class="col-md-4 fade-up">
+        <div class="team-card">
+          <div class="team-avatar">♜</div>
+          <div class="team-name">Tahiri Mohammed Amine</div>
+          <div class="team-class">CLASSE 3A</div>
+          <div class="team-role"><strong>Esportazione partite &amp; Sito</strong><br>Sistema di esportazione delle partite e creazione del sito di presentazione.</div>
+        </div>
+      </div>
+      <div class="col-md-4 fade-up">
+        <div class="team-card">
+          <div class="team-avatar">♜</div>
+          <div class="team-name">Ludovico Bardellotto</div>
+          <div class="team-class">CLASSE 3B</div>
+          <div class="team-role"><strong>Grafica &amp; Logica</strong><br>Parte grafica del motore e supporto allo sviluppo della logica di gioco.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="row gy-4">
+      <div class="col-md-4">
+        <div class="footer-logo">GMVT</div>
+        <div class="footer-tagline">// chess engine · C++ · 2025–2026</div>
+      </div>
+      <div class="col-md-4">
+        <div class="footer-credits-title">// sviluppatori</div>
+        <div class="credit-item"><div class="credit-dot"></div><div><div class="credit-name">Soel Xhemali</div><div class="credit-class">3A</div><div class="credit-role">Logica del bot &amp; sito</div></div></div>
+        <div class="credit-item"><div class="credit-dot"></div><div><div class="credit-name">Tahiri Mohammed Amine</div><div class="credit-class">3A</div><div class="credit-role">Esportazione partite &amp; sito</div></div></div>
+        <div class="credit-item"><div class="credit-dot"></div><div><div class="credit-name">Ludovico Bardellotto</div><div class="credit-class">3B</div><div class="credit-role">Grafica &amp; logica</div></div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="footer-credits-title">// sezioni</div>
+        <a href="#hero" class="footer-link">▸ Home</a>
+        <a href="#algoritmi" class="footer-link">▸ Algoritmi</a>
+        <a href="#team" class="footer-link">▸ Team</a>
+        <div class="footer-credits-title mt-3">// approfondimenti</div>
+        <a href="ricerca.html" class="footer-link">▸ Ricerca</a>
+        <a href="potatura.html" class="footer-link">▸ Potatura</a>
+        <a href="estensioni.html" class="footer-link">▸ Estensioni</a>
+        <a href="valutazione.html" class="footer-link">▸ Valutazione</a>
+        <a href="infrastruttura.html" class="footer-link">▸ Infrastruttura</a>
+      </div>
+    </div>
+    <div class="footer-bottom d-flex justify-content-between flex-wrap gap-2">
+      <span>© 2026 GMVT Chess Engine — Tutti i diritti riservati</span>
+      <span style="color:var(--green);opacity:0.55;">// built with C++</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="gmvt-intro.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script>
+(function(){
+  const canvas = document.getElementById('bg-canvas');
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000000, 0);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 200);
+  camera.position.set(0, 0, 30);
+
+  scene.add(new THREE.AmbientLight(0x00ff88, 0.25));
+  const dL1 = new THREE.DirectionalLight(0x00ff88, 1.1);
+  dL1.position.set(5, 10, 8); scene.add(dL1);
+  const dL2 = new THREE.DirectionalLight(0xffffff, 0.35);
+  dL2.position.set(-8, -5, 5); scene.add(dL2);
+  const pL = new THREE.PointLight(0x00ff88, 1.4, 60);
+  pL.position.set(0, 0, 10); scene.add(pL);
+
+  function mkMat(h, s, l, emit) {
+    return new THREE.MeshStandardMaterial({
+      color: new THREE.Color().setHSL(h, s, l),
+      metalness: 0.7, roughness: 0.2,
+      emissive: new THREE.Color().setHSL(h, s, emit),
+      emissiveIntensity: 0.25,
+      transparent: Math.random() > 0.6,
+      opacity: 0.75 + Math.random() * 0.25
+    });
+  }
+
+  function cyl(rt, rb, h, seg, mat, y) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat);
+    m.position.y = y; return m;
+  }
+  function pawn(mat) {
+    const g = new THREE.Group();
+    g.add(cyl(0.55,0.65,0.18,16,mat,0.09)); g.add(cyl(0.22,0.32,0.70,12,mat,0.53));
+    g.add(cyl(0.30,0.24,0.15,14,mat,0.95));
+    const h = new THREE.Mesh(new THREE.SphereGeometry(0.38,16,12),mat); h.position.y=1.28; g.add(h); return g;
+  }
+  function rook(mat) {
+    const g = new THREE.Group();
+    g.add(cyl(0.65,0.75,0.20,16,mat,0.10)); g.add(cyl(0.45,0.55,1.20,14,mat,0.80)); g.add(cyl(0.58,0.46,0.22,14,mat,1.51));
+    for(let i=0;i<4;i++){const b=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.30,0.18),mat);const a=i/4*Math.PI*2;b.position.set(Math.cos(a)*0.38,1.77,Math.sin(a)*0.38);g.add(b);}
+    return g;
+  }
+  function knight(mat) {
+    const g = new THREE.Group();
+    g.add(cyl(0.60,0.70,0.20,16,mat,0.10)); g.add(cyl(0.28,0.42,0.85,12,mat,0.62));
+    const hd=new THREE.Mesh(new THREE.BoxGeometry(0.40,0.55,0.62),mat); hd.position.set(0.10,1.32,0); hd.rotation.z=0.25; g.add(hd);
+    const sn=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.28,0.48),mat); sn.position.set(0.28,1.08,0); g.add(sn);
+    const ear=new THREE.Mesh(new THREE.ConeGeometry(0.08,0.22,6),mat); ear.position.set(-0.06,1.66,0.18); g.add(ear); return g;
+  }
+  function bishop(mat) {
+    const g=new THREE.Group();
+    g.add(cyl(0.60,0.70,0.20,16,mat,0.10)); g.add(cyl(0.28,0.48,1.00,14,mat,0.70));
+    const t=new THREE.Mesh(new THREE.TorusGeometry(0.30,0.07,8,20),mat); t.position.y=1.22; g.add(t);
+    g.add(cyl(0.06,0.26,0.70,12,mat,1.62));
+    const tip=new THREE.Mesh(new THREE.SphereGeometry(0.10,8,8),mat); tip.position.y=2.0; g.add(tip); return g;
+  }
+  function queen(mat) {
+    const g=new THREE.Group();
+    g.add(cyl(0.70,0.80,0.22,18,mat,0.11)); g.add(cyl(0.35,0.60,1.10,16,mat,0.77));
+    const w=new THREE.Mesh(new THREE.TorusGeometry(0.35,0.09,8,20),mat); w.position.y=1.35; g.add(w);
+    g.add(cyl(0.42,0.35,0.50,14,mat,1.65));
+    for(let i=0;i<5;i++){const sp=new THREE.Mesh(new THREE.ConeGeometry(0.07,0.28,6),mat);const a=i/5*Math.PI*2;sp.position.set(Math.cos(a)*0.34,2.08,Math.sin(a)*0.34);g.add(sp);}
+    const orb=new THREE.Mesh(new THREE.SphereGeometry(0.18,12,10),mat); orb.position.y=2.26; g.add(orb); return g;
+  }
+  function king(mat) {
+    const g=new THREE.Group();
+    g.add(cyl(0.72,0.82,0.22,18,mat,0.11)); g.add(cyl(0.38,0.62,1.20,16,mat,0.82));
+    const w=new THREE.Mesh(new THREE.TorusGeometry(0.38,0.09,8,20),mat); w.position.y=1.45; g.add(w);
+    g.add(cyl(0.44,0.38,0.55,14,mat,1.78));
+    const cv=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.55,0.12),mat); cv.position.y=2.40; g.add(cv);
+    const ch=new THREE.Mesh(new THREE.BoxGeometry(0.38,0.12,0.12),mat); ch.position.y=2.56; g.add(ch); return g;
+  }
+
+  const builders=[pawn,rook,knight,bishop,queen,king];
+  const pieces=[];
+  for(let i=0;i<30;i++){
+    const hue=0.35+Math.random()*0.14;
+    const mat=mkMat(hue,0.9,0.3+Math.random()*0.22,0.06);
+    const fn=builders[Math.floor(Math.random()*builders.length)];
+    const mesh=fn(mat);
+    const s=0.5+Math.random()*1.15;
+    mesh.scale.setScalar(s);
+    mesh.position.set((Math.random()-0.5)*62,(Math.random()-0.5)*50,(Math.random()-0.5)*24-4);
+    mesh.rotation.set(Math.random()*Math.PI*2,Math.random()*Math.PI*2,Math.random()*Math.PI*2);
+    scene.add(mesh);
+    pieces.push({mesh,rx:(Math.random()-0.5)*0.009,ry:(Math.random()-0.5)*0.013,rz:(Math.random()-0.5)*0.007,
+      fSpeed:0.25+Math.random()*0.65,fAmp:0.35+Math.random()*0.85,fOff:Math.random()*Math.PI*2,
+      baseY:mesh.position.y,baseX:mesh.position.x,baseZ:mesh.position.z,layer:0.002+Math.random()*0.006});
+  }
+
+  let scrollY=0,targetScroll=0,mouseX=0;
+  window.addEventListener('scroll',()=>{targetScroll=window.scrollY;});
+  window.addEventListener('mousemove',e=>{mouseX=(e.clientX/window.innerWidth-0.5)*2;});
+  window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);});
+
+  const clock=new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const t=clock.getElapsedTime();
+    scrollY+=(targetScroll-scrollY)*0.055;
+    camera.position.y+=(-scrollY*0.013-camera.position.y)*0.08;
+    camera.position.x+=(mouseX*1.8-camera.position.x)*0.035;
+    camera.rotation.z=Math.sin(t*0.045)*0.009;
+    pieces.forEach(p=>{
+      p.mesh.rotation.x+=p.rx; p.mesh.rotation.y+=p.ry; p.mesh.rotation.z+=p.rz;
+      p.mesh.position.y=p.baseY+Math.sin(t*p.fSpeed+p.fOff)*p.fAmp-scrollY*p.layer;
+      p.mesh.position.x=p.baseX+Math.sin(t*0.09+p.fOff)*1.1;
+      p.mesh.position.z=p.baseZ+Math.cos(t*0.07+p.fOff*0.8)*0.75;
+    });
+    pL.intensity=1.2+Math.sin(t*0.85)*0.45;
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach((e,i)=>{
+    if(e.isIntersecting){setTimeout(()=>e.target.classList.add('visible'),i*80);obs.unobserve(e.target);}
+  });
+},{threshold:0.1});
+document.querySelectorAll('.fade-up').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>

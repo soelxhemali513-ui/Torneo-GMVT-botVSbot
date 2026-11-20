@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GMVT — Ricerca</title>
+  <link rel="icon" type="image/x-icon" href="images/favicon.ico" >
+  <link rel="stylesheet" href="gmvt-shared.css" />
+  <style>
+    /* ── Accent theme: purple for Ricerca ── */
+    :root {
+      --accent-color: #afa9f0;
+      --accent-rgb:   175, 169, 240;
+      --green: #00ff88;
+      --green-dim: #00cc6a;
+      --green-faint: rgba(0,255,136,0.07);
+      --green-glow: rgba(0,255,136,0.22);
+      --bg: #050505;
+      --border: rgba(0,255,136,0.18);
+      --border-hover: rgba(0,255,136,0.50);
+      --text: #f0fff0;
+      --text-mid: #b8d4b8;
+      --text-dim: #8aac8a;
+      --mono: 'Share Tech Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+    .nav-link { font-family: var(--mono); color: var(--text-mid) !important; font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.4rem 0.9rem !important; transition: color 0.2s; }
+    .nav-link:hover { color: var(--green) !important; }
+    /* ── Depth visualizer ── */
+    .depth-tree {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      overflow-x: auto;
+      position: relative;
+    }
+    .tree-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 0.3rem;
+      white-space: nowrap;
+    }
+    .tree-indent { display: inline-block; width: 2rem; flex-shrink: 0; }
+    .tree-node {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      font-family: var(--mono); font-size: 0.78rem;
+      border: 1px solid; padding: 0.3rem 0.75rem;
+      border-radius: 2px; cursor: default;
+      transition: opacity 0.2s;
+    }
+    .tree-node.root    { border-color: #afa9f0; color: #afa9f0; background: rgba(175,169,240,0.08); }
+    .tree-node.pruned  { border-color: rgba(240,150,122,0.4); color: #f0967a; background: rgba(240,150,122,0.06); opacity: 0.5; text-decoration: line-through; }
+    .tree-node.active  { border-color: rgba(0,255,136,0.5); color: var(--green); background: rgba(0,255,136,0.07); }
+    .tree-node.quiet   { border-color: rgba(93,202,165,0.4); color: #5dcaa5; background: rgba(93,202,165,0.05); font-size: 0.72rem; }
+    .tree-arrow { color: var(--text-dim); font-size: 0.7rem; margin: 0 0.2rem; }
+    .tree-label { font-family: var(--mono); font-size: 0.68rem; color: var(--text-dim); padding-left: 0.8rem; }
+    .tree-legend {
+      display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem;
+      padding-top: 1rem; border-top: 1px solid var(--border);
+    }
+    .legend-item { display: flex; align-items: center; gap: 0.45rem; font-family: var(--mono); font-size: 0.68rem; color: var(--text-dim); }
+    .legend-dot { width: 10px; height: 10px; border: 1px solid; border-radius: 1px; }
+
+    /* ── Aspiration window visualizer ── */
+    .asp-bar {
+      position: relative;
+      height: 48px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      margin: 1rem 0;
+      overflow: hidden;
+    }
+    .asp-range {
+      position: absolute; top: 0; bottom: 0;
+      background: rgba(175,169,240,0.15);
+      border-left: 2px solid rgba(175,169,240,0.6);
+      border-right: 2px solid rgba(175,169,240,0.6);
+      transition: left 0.5s, width 0.5s;
+    }
+    .asp-value {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 8px; height: 28px;
+      background: var(--green);
+      box-shadow: 0 0 8px rgba(0,255,136,0.5);
+      transition: left 0.5s;
+    }
+    .asp-labels {
+      display: flex; justify-content: space-between;
+      font-family: var(--mono); font-size: 0.65rem;
+      color: var(--text-dim); margin-top: 0.3rem;
+    }
+    .asp-controls { display: flex; gap: 0.75rem; margin-top: 0.8rem; flex-wrap: wrap; }
+    .asp-btn {
+      font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.1em;
+      color: var(--accent-color); border: 1px solid rgba(175,169,240,0.3);
+      background: rgba(175,169,240,0.07); padding: 0.4rem 1rem;
+      cursor: pointer; text-transform: uppercase; transition: background 0.2s;
+    }
+    .asp-btn:hover { background: rgba(175,169,240,0.14); }
+    .asp-status {
+      font-family: var(--mono); font-size: 0.72rem;
+      color: var(--text-mid); margin-top: 0.6rem; min-height: 1.4em;
+    }
+    .asp-status .ok  { color: var(--green); }
+    .asp-status .fail { color: #f0967a; }
+
+    /* ── QSearch highlight diff ── */
+    .diff-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    .diff-table th {
+      font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.14em;
+      color: var(--text-dim); text-transform: uppercase;
+      text-align: left; padding: 0.5rem 0.8rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .diff-table td {
+      font-size: 0.85rem; color: var(--text-mid); padding: 0.55rem 0.8rem;
+      border-bottom: 1px solid rgba(0,255,136,0.04);
+    }
+    .diff-table tr:last-child td { border-bottom: none; }
+    .diff-table .yes { color: #5dcaa5; font-family: var(--mono); font-size: 0.8rem; }
+    .diff-table .no  { color: #f0967a; font-family: var(--mono); font-size: 0.8rem; }
+    .diff-table tr:hover td { background: rgba(175,169,240,0.03); }
+
+   
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">GMVT</a>
+  <div style="display:flex; align-items:center; gap:2rem;">
+    <a class="nav-back" href="index.html"> Algoritmi</a>
+    <ul class="navbar-nav">
+      <li><a class="nav-link" href="potatura.html">Potatura →</a></li>
+    </ul>
+  </div>
+</nav>
+
+<section class="page-hero">
+  <div class="page-hero-grid"></div>
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem; position:relative; z-index:2;">
+    <div class="page-tag">🔍 Categoria 1 / 5</div>
+    <h1 class="page-title">Ricerca<span>.</span></h1>
+    <p class="page-intro">
+      Come fa GMVT a scegliere la mossa migliore tra miliardi di possibilità? 
+      Tutto inizia qui: quattro algoritmi di ricerca che lavorano insieme per esplorare 
+      l'albero di gioco in modo intelligente, profondo e veloce.
+    </p>
+    <div class="page-pills">
+      <span class="pill"><a class="nav-link" href="#InterativeDeepening">Iterative Deepening</a></span><!--<a class="nav-link" href="#MDR">Aspiration Windows</a>-->
+      <span class="pill"><a class="nav-link" href="#PVS">PVS</a></span>
+      <span class="pill"><a class="nav-link" href="#QS">Quiescence Search</a></span>
+      <span class="pill"><a class="nav-link" href="#AW">Aspiration Windows</a></span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="InterativeDeepening">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">algoritmo 01</div>
+    <h2 class="section-heading">Iterative Deepening</h2>
+
+    <div class="section-body mb-3">
+      Il modo più ovvio di cercare la mossa migliore sarebbe esplorare subito alla 
+      profondità massima. Ma questo ha un problema enorme: <strong>non sai quanto ci 
+      vorrà</strong>, e potresti sforare il tempo limite.
+      <br><br>
+      L'<strong>Iterative Deepening</strong> risolve il problema cercando prima alla 
+      profondità 1, poi 2, poi 3… fino al limite di tempo. Ogni iterazione 
+      salva la mossa migliore trovata finora: se il tempo scade, hai sempre una risposta valida.
+    </div>
+
+    <div class="callout">
+      <div class="callout-icon">💡</div>
+      <div class="callout-content">
+        <div class="callout-title">Paradosso dell'efficienza</div>
+        <div class="callout-text">
+          Sembra uno spreco rieseguire le ricerche superficiali ogni volta. In realtà 
+          <strong>il costo totale è dominato dall'ultimo livello</strong>: con branching 
+          factor b=35, la profondità d costa b^d nodi — tutte le profondità 
+          precedenti sommate costano circa b/(b-1) ≈ 3% in più. Un trade-off 
+          quasi gratuito per avere controllo sul tempo.
+        </div>
+      </div>
+    </div>
+
+    <div class="complexity-row">
+      <div class="complexity-badge"><div class="cb-label">Profondità min</div><div class="cb-value">1</div></div>
+      <div class="complexity-badge"><div class="cb-label">Profondità max</div><div class="cb-value">14</div></div>
+      <div class="complexity-badge"><div class="cb-label">Limite tempo</div><div class="cb-value">700–2200 ms</div></div>
+    </div>
+
+    <!-- Codice reale da bot.cpp -->
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <div class="code-filename"><span>bot.cpp</span> — valuta_mossa()</div>
+        <div class="code-lang">C++</div>
+      </div>
+      <div class="code-body">
+<pre><span class="cm">// Calcola il limite di tempo in base alla fase di gioco</span>
+<span class="kw">int</span> <span class="var">mosse_giocate</span> = (<span class="kw">int</span>)storia_mosse.size();
+<span class="kw">int</span> <span class="var">limite_ms</span> = <span class="num">1000</span>;
+<span class="kw">if</span> (<span class="var">mosse_giocate</span> &lt; <span class="num">16</span>)  <span class="var">limite_ms</span> = <span class="num">700</span>;   <span class="cm">// apertura: più veloce</span>
+<span class="kw">if</span> (<span class="var">mosse_giocate</span> &gt;= <span class="num">40</span>) <span class="var">limite_ms</span> = <span class="num">1300</span>;  <span class="cm">// finale: più tempo</span>
+<span class="kw">if</span> (<span class="fn">fase_gioco</span>(<span class="var">scacch</span>) > <span class="num">180</span>) <span class="var">limite_ms</span> += <span class="num">200</span>;
+
+<span class="kw">int</span> <span class="var">profondita_corr</span> = <span class="num">1</span>;
+<span class="kw">const int</span> <span class="var">max_prof</span> = <span class="num">14</span>;
+
+<span class="cm">// ── Iterative Deepening: profondità 1 → 14 ──────────────────</span>
+<span class="hl"><span class="kw">while</span> (<span class="var">profondita_corr</span> &lt;= <span class="var">max_prof</span>)</span>
+<span class="hl">{</span>
+<span class="hl">    <span class="cm">// Cerca alla profondità corrente</span></span>
+<span class="hl">    <span class="kw">int</span> <span class="var">miglior_val</span> = <span class="op">-</span>INFINITO;</span>
+<span class="hl">    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; <span class="var">numero_mosse</span>; i++)</span>
+<span class="hl">    {</span>
+<span class="hl">        <span class="fn">esegui_mossa</span>(<span class="var">scacch</span>, <span class="var">mosse[i].da</span>, <span class="var">mosse[i].a</span>, <span class="var">matto_bot</span>);</span>
+<span class="hl">        <span class="kw">int</span> <span class="var">risultato</span> = <span class="op">-</span><span class="fn">minimax</span>(<span class="var">scacch</span>, <span class="var">profondita_corr</span> - <span class="num">1</span>, <span class="op">-</span><span class="var">beta_asp</span>, <span class="op">-</span><span class="var">alfa_asp</span>, ...);</span>
+<span class="hl">        <span class="fn">annulla_mossa</span>(<span class="var">scacch</span>);</span>
+<span class="hl">        <span class="kw">if</span> (<span class="var">risultato</span> > <span class="var">miglior_val</span>) { <span class="var">miglior_val</span> = <span class="var">risultato</span>; }</span>
+<span class="hl">    }</span>
+
+    <span class="cm">// Controlla il tempo rimasto</span>
+    <span class="kw">auto</span> <span class="var">trascorso</span> = <span class="var">durata</span>(<span class="fn">ora</span>() - <span class="var">inizio</span>);
+    <span class="kw">if</span> (<span class="var">trascorso.count</span>() &gt;= <span class="var">limite_ms</span>) <span class="kw">break</span>;  <span class="cm">// tempo scaduto</span>
+    <span class="var">profondita_corr</span>++;
+}</pre>
+      </div>
+    </div>
+
+    <!-- Visualizzatore depth tree -->
+    <p class="section-body mt-2">Questo è come appare l'albero delle iterazioni nel tempo — ogni riga rappresenta un'intera ricerca completata:</p>
+
+    <div class="depth-tree mt-2 fade-up">
+      <div class="tree-row"><div class="tree-node root">d=1 &nbsp;<span style="opacity:0.6;font-size:0.7rem">~35 nodi</span></div><div class="tree-label">2 ms — mossa salvata</div></div>
+      <div class="tree-row"><div class="tree-node root">d=2 &nbsp;<span style="opacity:0.6;font-size:0.7rem">~1 225 nodi</span></div><div class="tree-label">5 ms — mossa aggiornata</div></div>
+      <div class="tree-row"><div class="tree-node root">d=3 &nbsp;<span style="opacity:0.6;font-size:0.7rem">~42 875 nodi</span></div><div class="tree-label">18 ms — mossa aggiornata</div></div>
+      <div class="tree-row"><div class="tree-node active">d=4 &nbsp;<span style="opacity:0.6;font-size:0.7rem">~1 500 625 nodi</span></div><div class="tree-label">74 ms — mossa aggiornata</div></div>
+      <div class="tree-row"><div class="tree-node active">d=5 &nbsp;<span style="opacity:0.6;font-size:0.7rem">~52M nodi (stimati)</span></div><div class="tree-label">310 ms — mossa aggiornata</div></div>
+      <div class="tree-row"><div class="tree-node active">d=6 &nbsp;<span style="opacity:0.6;font-size:0.7rem">&lt; 2G con potatura</span></div><div class="tree-label">850 ms — mossa aggiornata</div></div>
+      <div class="tree-row"><div class="tree-node pruned">d=7 &nbsp;<span style="opacity:0.6;font-size:0.7rem">tempo scaduto</span></div><div class="tree-label">→ restituisce mossa di d=6 ✓</div></div>
+      <div class="tree-legend">
+        <div class="legend-item"><div class="legend-dot" style="border-color:#afa9f0;background:rgba(175,169,240,0.1)"></div> Completata</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:rgba(0,255,136,0.5);background:rgba(0,255,136,0.07)"></div> In corso</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:rgba(240,150,122,0.4);background:rgba(240,150,122,0.06)"></div> Interrotta (timeout)</div>
+      </div>
+    </div>
+
+    
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="PVS">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">algoritmo 02</div>
+    <h2 class="section-heading">PVS — Principal Variation Search</h2>
+
+    <div class="section-body mb-3">
+      L'alpha-beta standard cerca tutte le mosse con la stessa finestra <code style="font-family:var(--mono);color:var(--accent-color)">[alfa, beta]</code>.
+      Il <strong>Principal Variation Search</strong> fa un'osservazione furba: dopo 
+      aver trovato una buona mossa (la <em>principal variation</em>), le mosse 
+      successive probabilmente sono peggiori — non vale la pena cercarle a piena potenza.
+      <br><br>
+      Le mosse successive vengono quindi cercate con una <strong>finestra nulla</strong> 
+      <code style="font-family:var(--mono);color:var(--accent-color)">[-alfa-1, -alfa]</code> 
+      — una semplice verifica "è meglio o no?". Solo se la risposta è sì, si ri-cerca a 
+      finestra piena. In pratica, la maggioranza delle mosse viene scartata velocemente.
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <div class="code-filename"><span>bot.cpp</span> — minimax() con PVS</div>
+        <div class="code-lang">C++</div>
+      </div>
+      <div class="code-body">
+<pre><span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; <span class="var">numero_mosse</span>; i++)
+{
+    <span class="fn">esegui_mossa</span>(<span class="var">scacch</span>, <span class="var">mosse[i].da</span>, <span class="var">mosse[i].a</span>, <span class="var">matto_loc</span>);
+
+    <span class="kw">int</span> <span class="var">risultato</span>;
+
+    <span class="cm">// ── PVS: mosse successive → prima finestra nulla ─────────────</span>
+    <span class="kw">if</span> (i &gt;= <span class="num">4</span> && <span class="var">profondita</span> &gt;= <span class="num">3</span>
+        && !<span class="var">e_cattura</span> && !<span class="var">e_promozione_mossa</span>
+        && !<span class="var">in_scacco</span> && !<span class="var">da_scacco</span>)
+    {
+<span class="hl">        <span class="cm">// Cerca con finestra nulla: solo "è meglio di alfa?"</span></span>
+<span class="hl">        <span class="var">risultato</span> = <span class="op">-</span><span class="fn">minimax</span>(<span class="var">scacch</span>, <span class="var">prof</span><span class="op">-</span><span class="num">1</span><span class="op">-</span><span class="var">rid</span>, <span class="op">-</span><span class="var">alfa</span><span class="op">-</span><span class="num">1</span>, <span class="op">-</span><span class="var">alfa</span>, ...);</span>
+
+        <span class="kw">if</span> (<span class="var">risultato</span> &gt; <span class="var">alfa</span>)
+        {
+<span class="hl">            <span class="cm">// Sorpresa: mossa migliore del previsto → ri-cerca a piena finestra</span></span>
+<span class="hl">            <span class="var">risultato</span> = <span class="op">-</span><span class="fn">minimax</span>(<span class="var">scacch</span>, <span class="var">prof</span><span class="op">-</span><span class="num">1</span>, <span class="op">-</span><span class="var">beta</span>, <span class="op">-</span><span class="var">alfa</span>, ...);</span>
+        }
+    }
+    <span class="kw">else</span>
+    {
+        <span class="cm">// Prima mossa (PV) → sempre a finestra piena</span>
+        <span class="var">risultato</span> = <span class="op">-</span><span class="fn">minimax</span>(<span class="var">scacch</span>, <span class="var">prof</span><span class="op">-</span><span class="num">1</span>, <span class="op">-</span><span class="var">beta</span>, <span class="op">-</span><span class="var">alfa</span>, ...);
+    }
+
+    <span class="fn">annulla_mossa</span>(<span class="var">scacch</span>);
+    <span class="kw">if</span> (<span class="var">risultato</span> &gt; <span class="var">alfa</span>) <span class="var">alfa</span> = <span class="var">risultato</span>;
+    <span class="kw">if</span> (<span class="var">alfa</span> &gt;= <span class="var">beta</span>) <span class="kw">break</span>;  <span class="cm">// cutoff</span>
+}</pre>
+      </div>
+    </div>
+
+    <div class="callout fade-up">
+      <div class="callout-icon">⚡</div>
+      <div class="callout-content">
+        <div class="callout-title">Combinazione con LMR</div>
+        <div class="callout-text">
+          Nel codice, PVS è combinato con <strong>Late Move Reduction (LMR)</strong>: 
+          le mosse oltre la 4ª vengono cercate <em>sia</em> con finestra nulla 
+          <em>sia</em> con profondità ridotta (<code style="font-family:var(--mono);color:var(--accent-color)">prof-1-riduzione</code>). 
+          Solo un doppio fallback (finestra aperta) recupera la piena qualità di ricerca. 
+          Questo rende GMVT molto più veloce nelle posizioni con tante mosse candidate.
+        </div>
+      </div>
+    </div>
+
+    <!-- Schema visivo PVS -->
+    <div class="diagram-wrap fade-up">
+      <svg viewBox="0 0 740 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:740px;display:block;margin:0 auto">
+        <defs>
+          <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="rgba(175,169,240,0.6)"/>
+          </marker>
+        </defs>
+        <rect x="310" y="10" width="120" height="36" rx="2" fill="none" stroke="#afa9f0" stroke-width="1.2"/>
+        <text x="370" y="33" text-anchor="middle" font-family="Share Tech Mono" font-size="11" fill="#afa9f0">Posizione N</text>
+        <line x1="330" y1="46" x2="100" y2="100" stroke="rgba(175,169,240,0.4)" stroke-width="1" marker-end="url(#arr)"/>
+        <rect x="30" y="100" width="140" height="40" rx="2" fill="rgba(0,255,136,0.07)" stroke="rgba(0,255,136,0.5)" stroke-width="1.2"/>
+        <text x="100" y="117" text-anchor="middle" font-family="Share Tech Mono" font-size="10" fill="#00ff88">mossa 1 (PV)</text>
+        <text x="100" y="132" text-anchor="middle" font-family="Share Tech Mono" font-size="9" fill="rgba(0,255,136,0.6)">finestra piena [α,β]</text>
+        <line x1="370" y1="46" x2="370" y2="100" stroke="rgba(175,169,240,0.4)" stroke-width="1" marker-end="url(#arr)"/>
+        <rect x="300" y="100" width="140" height="40" rx="2" fill="rgba(175,169,240,0.06)" stroke="rgba(175,169,240,0.4)" stroke-width="1"/>
+        <text x="370" y="117" text-anchor="middle" font-family="Share Tech Mono" font-size="10" fill="#afa9f0">mosse 2-N</text>
+        <text x="370" y="132" text-anchor="middle" font-family="Share Tech Mono" font-size="9" fill="rgba(175,169,240,0.6)">finestra nulla [α, α+1]</text>
+        <line x1="410" y1="46" x2="620" y2="100" stroke="rgba(175,169,240,0.4)" stroke-width="1" marker-end="url(#arr)"/>
+        <rect x="560" y="100" width="140" height="40" rx="2" fill="rgba(240,150,122,0.06)" stroke="rgba(240,150,122,0.4)" stroke-width="1"/>
+        <text x="630" y="117" text-anchor="middle" font-family="Share Tech Mono" font-size="10" fill="#f0967a">fail-high!</text>
+        <text x="630" y="132" text-anchor="middle" font-family="Share Tech Mono" font-size="9" fill="rgba(240,150,122,0.6)">ri-cerca finestra piena</text>
+        <text x="370" y="175" text-anchor="middle" font-family="Share Tech Mono" font-size="10" fill="rgba(175,169,240,0.5)">— se la finestra nulla fallisce verso l'alto, la mossa è sorprendentemente buona →</text>
+      </svg>
+      <div class="diagram-caption">// Schema PVS: la prima mossa (PV) viene sempre ricercata a piena finestra; le successive solo se superano il test a finestra nulla</div>
+    </div>
+
+    
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="QS">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">algoritmo 03</div>
+    <h2 class="section-heading">Quiescence Search</h2>
+
+    <div class="section-body mb-3">
+      Immagina che la ricerca si fermi con la regina avversaria che sta per catturare un 
+      pedone. La valutazione statica direbbe "tutto ok", ma è una bugia: la posizione è 
+      tutt'altro che tranquilla (<em>quiet</em>).
+      <br><br>
+      La <strong>Quiescence Search</strong> estende la ricerca oltre la profondità massima,
+      ma valuta <em>solo catture e promozioni</em> — le mosse "rumorose" — 
+      finché non si raggiunge una posizione veramente stabile. 
+      Questo elimina l'<strong>effetto orizzonte</strong>, uno dei difetti classici dei motori scacchistici.
+    </div>
+
+    <!-- Confronto tabella -->
+    <table class="diff-table fade-up">
+      <tr>
+        <th>Caratteristica</th>
+        <th>Ricerca normale</th>
+        <th>Quiescence Search</th>
+      </tr>
+      <tr><td>Mosse considerate</td><td>Tutte le mosse legali</td><td>Solo catture + promozioni</td></tr>
+      <tr><td>Limite profondità</td><td>Sì (max 14)</td><td>Sì (max +8 livelli)</td></tr>
+      <tr><td>Stand-pat cutoff</td><td class="no">No</td><td class="yes">Sì</td></tr>
+      <tr><td>Delta pruning</td><td class="no">No</td><td class="yes">Sì (Δ=950 centipedoni)</td></tr>
+      <tr><td>Usa alpha-beta</td><td class="yes">Sì</td><td class="yes">Sì</td></tr>
+    </table>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <div class="code-filename"><span>bot.cpp</span> — ricerca_quiete()</div>
+        <div class="code-lang">C++</div>
+      </div>
+      <div class="code-body">
+<pre><span class="kw">int</span> <span class="fn">ricerca_quiete</span>(<span class="tp">scacchiera</span> &<span class="var">scacch</span>, <span class="kw">int</span> <span class="var">alfa</span>, <span class="kw">int</span> <span class="var">beta</span>, <span class="kw">int</span> <span class="var">colore_bot</span>, <span class="kw">int</span> <span class="var">prof_qs</span>)
+{
+    <span class="cm">// Evita stack overflow su posizioni tattiche esplosive</span>
+    <span class="kw">if</span> (<span class="var">prof_qs</span> >= <span class="num">8</span>) <span class="kw">return</span> <span class="fn">valutazione</span>(<span class="var">scacch</span>, <span class="var">turno</span>);
+
+<span class="hl">    <span class="cm">// Stand-pat: valutazione statica come lower bound</span></span>
+<span class="hl">    <span class="kw">int</span> <span class="var">stand_pat</span> = <span class="fn">valutazione</span>(<span class="var">scacch</span>, <span class="var">turno</span>);</span>
+<span class="hl">    <span class="kw">if</span> (<span class="var">stand_pat</span> >= <span class="var">beta</span>) <span class="kw">return</span> <span class="var">beta</span>;    <span class="cm">// beta cutoff immediato</span></span>
+
+    <span class="cm">// Delta pruning: ignora catture che non possono migliorare abbastanza</span>
+<span class="hl">    <span class="kw">static const int</span> <span class="var">DELTA</span> = <span class="num">950</span>; <span class="cm">// ≈ valore di una regina</span></span>
+<span class="hl">    <span class="kw">if</span> (<span class="var">stand_pat</span> &lt; <span class="var">alfa</span> - <span class="var">DELTA</span>) <span class="kw">return</span> <span class="var">alfa</span>; <span class="cm">// troppo indietro</span></span>
+
+    <span class="kw">if</span> (<span class="var">stand_pat</span> &gt; <span class="var">alfa</span>) <span class="var">alfa</span> = <span class="var">stand_pat</span>;
+
+    <span class="cm">// Genera e filtra solo mosse tattiche (catture + promozioni)</span>
+    <span class="tp">Mossa</span> <span class="var">tutte</span>[<span class="num">256</span>]; <span class="kw">int</span> <span class="var">totale</span> = <span class="fn">genera_mosse</span>(<span class="var">tutte</span>, <span class="var">turno</span>, <span class="var">scacch</span>);
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; <span class="var">totale</span>; i++) {
+        <span class="kw">bool</span> <span class="var">e_cattura</span>    = (<span class="var">scacch.casa</span>[<span class="var">tutte[i].a</span>] != <span class="num">0</span>);
+        <span class="kw">bool</span> <span class="var">e_promozione</span> = (<span class="var">tutte[i].promozione</span> != <span class="num">0</span>);
+        <span class="kw">if</span> (!<span class="var">e_cattura</span> && !<span class="var">e_promozione</span>) <span class="kw">continue</span>; <span class="cm">// scarta mosse silenziose</span>
+        <span class="cm">// ...ordina per MVV-LVA e valuta ricorsivamente</span>
+    }
+    <span class="kw">return</span> <span class="var">alfa</span>;
+}</pre>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-top:1.5rem;" class="fade-up">
+      <div class="concept-card">
+        <div class="concept-num">A</div>
+        <div class="concept-label">Stand-pat cutoff</div>
+        <div class="concept-title">Il diritto di non fare niente</div>
+        <div class="concept-text">
+          Se la valutazione statica è già &gt;= beta, il giocatore ha già una posizione 
+          abbastanza buona da rifiutare questa linea. Non serve continuare — 
+          è come dire <strong>"anche se non catturo, sto già vincendo"</strong>.
+        </div>
+      </div>
+      <div class="concept-card">
+        <div class="concept-num">B</div>
+        <div class="concept-label">Delta pruning</div>
+        <div class="concept-title">Ottimismo a 950 centipedoni</div>
+        <div class="concept-text">
+          Se la valutazione statica è già di 950 punti sotto alfa, 
+          nessuna singola cattura può recuperare abbastanza. Il valore 950 
+          è scelto perché corrisponde a circa il <strong>valore di una regina</strong> — 
+          la cattura più preziosa possibile.
+        </div>
+      </div>
+    </div>
+
+    
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="content-section" id="AW">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">algoritmo 04</div>
+    <h2 class="section-heading">Aspiration Windows</h2>
+
+    <div class="section-body mb-3">
+      Quando GMVT ha già trovato un valore alla profondità precedente, 
+      è ragionevole <strong>aspettarsi</strong> che il valore alla prossima profondità 
+      non sia molto lontano. Invece di cercare con la finestra infinita <code style="font-family:var(--mono);color:var(--accent-color)">[-∞, +∞]</code>, 
+      si usa una finestra ristretta attorno al valore precedente.
+      <br><br>
+      Se il risultato cade fuori dalla finestra (<em>fail-low</em> o <em>fail-high</em>), 
+      la ricerca viene ripetuta con una finestra più larga. 
+      Nella maggioranza dei casi, però, la finestra stretta 
+      <strong>dimezza il lavoro</strong> necessario.
+    </div>
+
+    <!-- Finestra interattiva -->
+    <div class="diagram-wrap fade-up">
+      <div style="font-family:var(--mono);font-size:0.72rem;color:var(--text-dim);margin-bottom:0.8rem;letter-spacing:0.1em;">// SIMULATORE — clicca per vedere cosa succede</div>
+
+      <div style="font-family:var(--mono);font-size:0.75rem;color:var(--text-mid);margin-bottom:0.5rem;">Valore precedente: <span id="val-prec" style="color:var(--accent-color)">+120</span> &nbsp;|&nbsp; Finestra: [<span id="win-low" style="color:#f0967a">+70</span>, <span id="win-high" style="color:#5dcaa5">+170</span>]</div>
+
+      <div class="asp-bar" id="asp-bar">
+        <div class="asp-range" id="asp-range" style="left:37.5%;width:25%"></div>
+        <div class="asp-value" id="asp-value" style="left:50%"></div>
+      </div>
+      <div class="asp-labels">
+        <span>-200</span><span>-100</span><span>0</span><span>+100</span><span>+200</span>
+      </div>
+
+      <div class="asp-controls">
+        <button class="asp-btn" onclick="aspSim('ok')">Risultato nella finestra</button>
+        <button class="asp-btn" onclick="aspSim('faillow')">Fail-Low (troppo basso)</button>
+        <button class="asp-btn" onclick="aspSim('failhigh')">Fail-High (troppo alto)</button>
+        <button class="asp-btn" onclick="aspSim('reset')">Reset</button>
+      </div>
+      <div class="asp-status" id="asp-status">← Clicca un bottone per simulare</div>
+    </div>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <div class="code-filename"><span>bot.cpp</span> — Aspiration Windows in valuta_mossa()</div>
+        <div class="code-lang">C++</div>
+      </div>
+      <div class="code-body">
+<pre><span class="kw">int</span> <span class="var">finestra</span> = <span class="num">50</span>;          <span class="cm">// ±50 centipedoni intorno al valore precedente</span>
+<span class="kw">int</span> <span class="var">valore_prec</span> = <span class="op">-</span>INFINITO;
+
+<span class="kw">while</span> (<span class="var">profondita_corr</span> &lt;= <span class="var">max_prof</span>)
+{
+    <span class="kw">int</span> <span class="var">alfa_asp</span>, <span class="var">beta_asp</span>;
+
+<span class="hl">    <span class="cm">// A partire da profondità 4: finestra stretta ±50</span></span>
+<span class="hl">    <span class="kw">if</span> (<span class="var">profondita_corr</span> >= <span class="num">4</span> && <span class="var">valore_prec</span> > <span class="op">-</span>INFINITO / <span class="num">2</span>)</span>
+<span class="hl">    {</span>
+<span class="hl">        <span class="var">alfa_asp</span> = <span class="var">valore_prec</span> - <span class="var">finestra</span>;</span>
+<span class="hl">        <span class="var">beta_asp</span> = <span class="var">valore_prec</span> + <span class="var">finestra</span>;</span>
+<span class="hl">    } <span class="kw">else</span> {</span>
+<span class="hl">        <span class="var">alfa_asp</span> = <span class="op">-</span>INFINITO; <span class="var">beta_asp</span> = INFINITO; <span class="cm">// finestra piena</span></span>
+<span class="hl">    }</span>
+
+    <span class="var">ri_cerca</span> = <span class="kw">false</span>;
+    <span class="cm">/* ... esegui la ricerca ... */</span>
+
+    <span class="kw">if</span> (<span class="var">miglior_val</span> &lt;= <span class="var">alfa_asp</span>)       <span class="cm">// fail-low</span>
+    {
+<span class="hl">        <span class="var">alfa_asp</span> = <span class="op">-</span>INFINITO; <span class="var">ri_cerca</span> = <span class="kw">true</span>; <span class="cm">// apri finestra verso il basso</span></span>
+    }
+    <span class="kw">else if</span> (<span class="var">miglior_val</span> >= <span class="var">beta_asp</span>)  <span class="cm">// fail-high</span>
+    {
+<span class="hl">        <span class="var">beta_asp</span> = INFINITO; <span class="var">ri_cerca</span> = <span class="kw">true</span>;  <span class="cm">// apri finestra verso l'alto</span></span>
+    }
+    <span class="var">valore_prec</span> = <span class="var">miglior_val</span>;
+}</pre>
+      </div>
+    </div>
+
+    <div class="callout fade-up">
+      <div class="callout-icon">🎯</div>
+      <div class="callout-content">
+        <div class="callout-title">Perché ±50 centipedoni?</div>
+        <div class="callout-text">
+          50 centipedoni equivale a circa <strong>metà pedone</strong>. Nella maggior 
+          parte delle posizioni di gioco normale, il valore non cambia di più tra una 
+          profondità e la successiva. Un valore più piccolo causerebbe troppi fail 
+          (ri-ricerche costose), uno più grande ridurrebbe i benefici dell'ottimizzazione.
+        </div>
+      </div>
+    </div>
+
+    
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════
+     SEZIONE 5 — RIEPILOGO
+══════════════════════════════════════════ -->
+<section class="content-section">
+  <div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+
+    <div class="section-eyebrow">riepilogo</div>
+    <h2 class="section-heading">Come lavorano insieme</h2>
+
+    <p class="section-body mb-3">
+      I quattro algoritmi non sono indipendenti: sono strati che si potenziano a vicenda ogni volta che GMVT deve muovere.
+    </p>
+
+    <ul class="step-list fade-up">
+      <li>
+        <div class="step-num">1</div>
+        <div><strong>Iterative Deepening</strong> lancia la ricerca alla profondità 1 e incrementa. Ogni iterazione usa i risultati della precedente per ordinare meglio le mosse (tramite la TT).</div>
+      </li>
+      <li>
+        <div class="step-num">2</div>
+        <div><strong>Aspiration Windows</strong> restringe la finestra alpha-beta ad ogni iterazione, partendo dal valore trovato nell'iterazione precedente. Risparmia fino al 30-40% dei nodi in posizioni stabili.</div>
+      </li>
+      <li>
+        <div class="step-num">3</div>
+        <div><strong>PVS</strong> dentro ogni chiamata a minimax cerca la prima mossa a piena finestra, poi usa la finestra nulla per verificare rapidamente le restanti. Solo i fail-high causano ri-ricerche costose.</div>
+      </li>
+      <li>
+        <div class="step-num">4</div>
+        <div><strong>Quiescence Search</strong> entra in gioco quando la profondità scende a 0. Estende la ricerca sulle posizioni "calde" (catture aperte) per evitare valutazioni ottimiste su scambi di materiale in corso.</div>
+      </li>
+    </ul>
+
+    <div class="code-wrap fade-up">
+      <div class="code-header">
+        <div class="code-filename"><span>bot.cpp</span> — Come si connettono</div>
+        <div class="code-lang">flusso</div>
+      </div>
+      <div class="code-body">
+<pre><span class="fn">valuta_mossa</span>()
+  ├─ <span class="fn">cerca_nel_book</span>()         <span class="cm">// Opening book → se hit, ritorna subito</span>
+  └─ <span class="kw">while</span> (ID, d=1→14)
+       ├─ <span class="fn">AspWindows</span>: [v-50, v+50]
+       └─ <span class="kw">for</span> ogni mossa radice
+            └─ <span class="fn">minimax</span>(d-1, alfa, beta)         <span class="cm">// PVS attivo</span>
+                 ├─ TT lookup / store
+                 ├─ Null Move, Futility, LMR ...   <span class="cm">// Potatura (→ altra pagina)</span>
+                 ├─ <span class="kw">for</span> ogni mossa ricorsiva
+                 │    └─ <span class="fn">minimax</span>(d-1-rid, ...)      <span class="cm">// PVS finestra nulla</span>
+                 └─ <span class="kw">if</span> (d == 0) <span class="fn">ricerca_quiete</span>()  <span class="cm">// QSearch</span>
+                                 ├─ stand-pat
+                                 ├─ delta pruning
+                                 └─ solo catture/promo</pre>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════ PAGE NAVIGATION ══════════════ -->
+<div style="max-width:1100px; margin:0 auto; padding:0 2rem;">
+  <div class="divider"></div>
+  <div class="page-nav">
+    <a href="index.html" class="page-nav-btn prev">
+      <div class="pnb-arrow">←</div>
+      <div>
+        <div class="pnb-label">Torna a</div>
+        <div class="pnb-title">Panoramica algoritmi</div>
+      </div>
+    </a>
+    <a href="potatura.html" class="page-nav-btn">
+      <div>
+        <div class="pnb-label">Prossimo</div>
+        <div class="pnb-title">Potatura (Pruning)</div>
+      </div>
+      <div class="pnb-arrow">→</div>
+    </a>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-brand">GMVT</div>
+  <div class="site-footer-copy">// chess engine · Ricerca · C++ · 2025–2026</div>
+</footer>
+
+<script>
+const scenarios = {
+  ok: {
+    val: 130, low: 70, high: 170, newVal: 130,
+    status: '<span class="ok">✓ Risultato nella finestra [+70, +170] — nessuna ri-ricerca necessaria</span>'
+  },
+  faillow: {
+    val: 45, low: -Infinity, high: 170, newVal: 45,
+    status: '<span class="fail">✗ Fail-Low! Il valore (+45) è sotto alfa (+70) — riapertura della finestra verso -∞</span>'
+  },
+  failhigh: {
+    val: 230, low: 70, high: Infinity, newVal: 230,
+    status: '<span class="fail">✗ Fail-High! Il valore (+230) supera beta (+170) — riapertura della finestra verso +∞</span>'
+  },
+  reset: {
+    val: 120, low: 70, high: 170, newVal: null,
+    status: '← Clicca un bottone per simulare'
+  }
+};
+
+function aspSim(type) {
+  const s = scenarios[type];
+  const range = document.getElementById('asp-range');
+  const value = document.getElementById('asp-value');
+  document.getElementById('asp-status').innerHTML = s.status;
+
+  const toPercent = v => {
+    if (v === -Infinity) return 0;
+    if (v === Infinity) return 100;
+    return ((v + 200) / 400) * 100;
+  };
+
+  const lo = toPercent(s.low), hi = toPercent(s.high), vp = toPercent(s.val);
+  range.style.left = lo + '%';
+  range.style.width = (hi - lo) + '%';
+  value.style.left = (vp - 0.5) + '%';
+
+  document.getElementById('val-prec').textContent = (s.val >= 0 ? '+' : '') + s.val;
+  document.getElementById('win-low').textContent  = s.low  === -Infinity ? '-∞' : (s.low  >= 0 ? '+' : '') + s.low;
+  document.getElementById('win-high').textContent = s.high === Infinity  ? '+∞' : (s.high >= 0 ? '+' : '') + s.high;
+}
+
+function initAll() {}
+
+const obs = new IntersectionObserver(entries => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('visible'), i * 80);
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+window.addEventListener('load', initAll);
+</script>
+<script src="gmvt-intro.js"></script>
+</body>
+</html>
